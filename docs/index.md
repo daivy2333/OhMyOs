@@ -7,10 +7,10 @@
 
 ## 周报索引
 
+<!-- WEEKLY_INDEX_START -->
 | 周次 | 周期 | 主题 |
 | --- | --- | --- |
-<!-- WEEKLY_INDEX_START -->
-| [W01](weeks/weekly-2026-W01) | 2026-06-22 ~ 2026-06-28 | W01 - 训练营后第一周 |
+| [W00](weeks/weekly-2026-W00) | 2026-06-22 ~ 2026-06-28 | W00 - 训练营后第一周 |
 <!-- WEEKLY_INDEX_END -->
 
 > 新增周报：在 `docs/weeks/` 下新建 `weekly-YYYY-WXX.md`，push 后自动更新此页。

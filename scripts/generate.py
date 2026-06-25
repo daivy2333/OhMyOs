@@ -48,18 +48,16 @@ def collect_weeks() -> list[dict]:
 
 
 def generate_index(weeks: list[dict]) -> str:
-    """读取 index.md 模板，替换占位标记。"""
     template = INDEX_MD.read_text(encoding="utf-8")
 
-    rows = []
+    lines = ["| 周次 | 周期 | 主题 |", "| --- | --- | --- |"]
     for w in weeks:
-        rows.append(
+        lines.append(
             f"| [{w['week']}]({w['link']}) | {w['date_range']} | {w['title']} |"
         )
 
-    table = "\n".join(rows) if rows else "| 暂无周报 | - | - |"
+    table = "\n".join(lines)
 
-    # 替换占位标记
     result = re.sub(
         r"<!-- WEEKLY_INDEX_START -->.*<!-- WEEKLY_INDEX_END -->",
         f"<!-- WEEKLY_INDEX_START -->\n{table}\n<!-- WEEKLY_INDEX_END -->",
