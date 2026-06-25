@@ -3,7 +3,7 @@ _site/
 .jekyll-metadata
 .bundle/
 vendor/
-Gemfile.lock
+site/
 
 # IDE
 .idea/
