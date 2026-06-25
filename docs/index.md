@@ -13,4 +13,12 @@
 | [W00](weeks/weekly-2026-W00) | 2026-06-22 ~ 2026-06-28 | W00 - 训练营后第一周 |
 <!-- WEEKLY_INDEX_END -->
 
-> 新增周报：在 `docs/weeks/` 下新建 `weekly-YYYY-WXX.md`，push 后自动更新此页。
+## 学习笔记
+
+<!-- NOTES_INDEX_START -->
+| 标题 | 日期 | 标签 |
+| --- | --- | --- |
+| [Rust 异步编程核心概念](notes/rust-async) | 2026-06-25 | rust, async, tokio |
+<!-- NOTES_INDEX_END -->
+
+> 新增内容：在 `docs/weeks/` 或 `docs/notes/` 下新建 md 文件，push 后自动更新此页。

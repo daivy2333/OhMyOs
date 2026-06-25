@@ -48,6 +48,10 @@ nav:
       # NAV_WEEKS_START
       - W00 - 训练营后第一周: weeks/weekly-2026-W00.md
       # NAV_WEEKS_END
+  - 学习笔记:
+      # NAV_NOTES_START
+      - Rust 异步编程核心概念: notes/rust-async.md
+      # NAV_NOTES_END
 
 plugins:
   - search:
