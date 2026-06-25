@@ -1,6 +1,8 @@
 # Jekyll 配置：GitHub Pages + minima 主题
 title: "学习周记"
 description: "周度学习记录与心得"
+url: "https://daivy2333.github.io"
+baseurl: "/OhMyOs"
 theme: minima
 
 # Markdown 解析器
