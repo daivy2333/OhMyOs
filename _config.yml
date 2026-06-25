@@ -1,0 +1,27 @@
+# Jekyll 配置：GitHub Pages + minima 主题
+title: "学习周记"
+description: "周度学习记录与心得"
+theme: minima
+
+# Markdown 解析器
+markdown: kramdown
+highlighter: rouge
+
+# 时区（影响 front matter 中 date 的解析）
+timezone: Asia/Shanghai
+
+# 排除 Jekyll 不需要处理的文件
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - .github/
+
+# 默认 front matter：让 weeks/ 下的所有页面都用 default 布局
+defaults:
+  - scope:
+      path: "weeks/"
+      type: pages
+    values:
+      layout: default

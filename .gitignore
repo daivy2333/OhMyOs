@@ -1,0 +1,12 @@
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.bundle/
+vendor/
+Gemfile.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
