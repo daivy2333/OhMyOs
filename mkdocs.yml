@@ -45,7 +45,9 @@ theme:
 nav:
   - 首页: index.md
   - 周报索引:
-    - W01 - 训练营后第一周: weeks/weekly-2026-W01.md
+      # NAV_WEEKS_START
+      - W01 - 训练营后第一周: weeks/weekly-2026-W01.md
+      # NAV_WEEKS_END
 
 plugins:
   - search:

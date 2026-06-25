@@ -9,6 +9,8 @@
 
 | 周次 | 周期 | 主题 |
 | --- | --- | --- |
-| [W01](weeks/weekly-2026-W01) | 2026-06-22 ~ 2026-06-28 | 训练营后第一周 |
+<!-- WEEKLY_INDEX_START -->
+| [W01](weeks/weekly-2026-W01) | 2026-06-22 ~ 2026-06-28 | W01 - 训练营后第一周 |
+<!-- WEEKLY_INDEX_END -->
 
-> 新增周报：在 `weeks/` 下新建 `weekly-2026-WXX.md`，然后在本页表格里补一行。
+> 新增周报：在 `docs/weeks/` 下新建 `weekly-YYYY-WXX.md`，push 后自动更新此页。
