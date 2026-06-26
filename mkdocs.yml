@@ -50,6 +50,13 @@ nav:
       # NAV_WEEKS_END
   - 学习笔记:
       # NAV_NOTES_START
+      - 异步驱动的泛型与 Trait 抽象: notes/async-driver-generics.md
+      - 异步驱动的线程安全: notes/async-driver-thread-safety.md
+      - 异步串口入口与全局实例: notes/async-uart-entry.md
+      - ISR 触发后禁用中断: notes/isr-disable-level-trigger.md
+      - ISR 极简 4 步流程: notes/isr-minimal-4-step.md
+      - 内存序：QEMU 掩盖的真板陷阱: notes/memory-ordering-smp.md
+      - Rust 异步驱动语言特性: notes/rust-async-driver-basics.md
       - Rust 异步编程核心概念: notes/rust-async.md
       # NAV_NOTES_END
 

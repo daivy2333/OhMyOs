@@ -26,7 +26,7 @@
 | 代码 | 每个类型一份 | 共享一份 |
 | 灵活性 | 编译期固定 | 运行时可换 |
 
-## type alias 折叠复杂类型
+## type alias 折叠
 
 ```rust
 pub type ArceOsDriver = AsyncUartDriver<ArceOsRuntime, ArceOsWakerSet, ArceOsUartPort>;
@@ -34,13 +34,9 @@ pub type ArceOsDriver = AsyncUartDriver<ArceOsRuntime, ArceOsWakerSet, ArceOsUar
 
 `pub type` 是编译期纯替换，零运行时开销。
 
-StarryOS 用 4 个 type alias 折叠所有泛型：
-- `ArceOsDriver`
-- `ArceOsReader`
-- `ArceOsWriter`
-- `AsyncTty = Tty<ArceOsReader, ArceOsWriter>`
+StarryOS 用 4 个 type alias 折叠所有泛型：`ArceOsDriver`、`ArceOsReader`、`ArceOsWriter`、`AsyncTty = Tty<ArceOsReader, ArceOsWriter>`。
 
-## PhantomData 保留"逻辑上有但实际无"的类型
+## PhantomData 用途
 
 `R` 不在字段里（只在 spawn 时用 `R::spawn`），但仍是泛型参数。
 
@@ -54,7 +50,7 @@ _runtime: PhantomData<R>,
 
 `PhantomData<T>` 是 ZST（零大小类型），不占内存。
 
-## R 出现 4 次的位置
+## R 出现 4 次
 
 | 位置 | 作用 |
 |---|---|
@@ -64,10 +60,3 @@ _runtime: PhantomData<R>,
 | unsafe impl trait bound | Send/Sync 派生 |
 
 多写 PhantomData 字段无意义（ZST 重复，编译器警告 unused field）。
-
-## 关键设计原则
-
-- 热路径用泛型（零开销）
-- type alias 折叠复杂泛型
-- PhantomData 保留逻辑类型
-- 多泛型 vs trait object 视场景选

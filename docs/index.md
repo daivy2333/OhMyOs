@@ -18,6 +18,13 @@
 <!-- NOTES_INDEX_START -->
 | 标题 | 日期 | 标签 |
 | --- | --- | --- |
+| [异步驱动的泛型与 Trait 抽象](notes/async-driver-generics) | 2026-06-25 | rust, generic, trait, async, uart |
+| [异步驱动的线程安全](notes/async-driver-thread-safety) | 2026-06-25 | rust, send, sync, atomic, thread-safety, uart |
+| [异步串口入口与全局实例](notes/async-uart-entry) | 2026-06-25 | rust, async, os, riscv, uart |
+| [ISR 触发后禁用中断](notes/isr-disable-level-trigger) | 2026-06-25 | rust, os, riscv, interrupt, uart |
+| [ISR 极简 4 步流程](notes/isr-minimal-4-step) | 2026-06-25 | rust, isr, riscv, interrupt, uart, dependency-injection |
+| [内存序：QEMU 掩盖的真板陷阱](notes/memory-ordering-smp) | 2026-06-25 | rust, memory-ordering, riscv, smp, atomic, optimization |
+| [Rust 异步驱动语言特性](notes/rust-async-driver-basics) | 2026-06-25 | rust, async, generic, unsafe, smart-pointer, send, sync, deref |
 | [Rust 异步编程核心概念](notes/rust-async) | 2026-06-25 | rust, async, tokio |
 <!-- NOTES_INDEX_END -->
 
