@@ -1,11 +1,11 @@
-# Rust 异步编程核心概念
+# Rust 异步编程基础
 
 **日期**：2026-06-25
 **标签**：rust, async, tokio
 
 ## Future trait
 
-Rust 异步的核心抽象是 `Future` trait：
+Rust 异步的关键抽象是 `Future` trait：
 
 ```rust
 pub trait Future {

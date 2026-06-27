@@ -3,10 +3,10 @@
 **日期**：2026-06-25
 **标签**：rust, os, riscv, interrupt, uart
 
-> 来源：StarryOS `uart_16550/src/async_/isr.rs:71-92` 通读（行号需人工核对）。
+> 来源：StarryOS `uart_16550/src/async_/isr.rs:71-92` 通读。
 > 范围：NS16550 中断机制与 ISR-copier 交接模式。
 
-## 直接答案
+## 答案
 
 不是防"其他中断嵌套"，是防"同一中断条件反复触发"。
 
@@ -93,7 +93,7 @@ ISR 返回后 SIE 恢复。但若 IER.DATA_READY=1 且 FIFO 仍非空 → 立即
 
 ## IsrRegisters 与 read_volatile
 
-`isr.rs:23-62` 的 `IsrRegisters`（行号需人工核对）绕过 `Uart16550` API 直接读寄存器：
+`isr.rs:23-62` 的 `IsrRegisters` 绕过 `Uart16550` API 读寄存器：
 
 ```rust
 pub(crate) unsafe fn read_isr(&self) -> ISR {
@@ -130,4 +130,4 @@ pub(crate) unsafe fn read_isr(&self) -> ISR {
 - RISC-V trap 机制：硬件自动保存现场、sstatus.SIE 自动切换。
 - PLIC 路由：外设中断通过 PLIC 派发到 hart。
 - `read_volatile` 必要性：设备状态不能被编译器优化。
-- `IsrRegisters` 模式：ISR 中绕过高级 API，直接 `read_volatile` 读寄存器，避开锁。
+- `IsrRegisters` 模式：ISR 中绕过高级 API，用 `read_volatile` 读寄存器，避开锁。

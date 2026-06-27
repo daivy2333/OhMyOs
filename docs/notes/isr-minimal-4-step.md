@@ -62,7 +62,7 @@ impl IsrRegisters {
 }
 ```
 
-不走 `Uart16550::isr()`（需要 SpinNoIrq 锁，违反 ISR 极简），用 `read_volatile` 读 MMIO 寄存器。
+不走 `Uart16550::isr()`（需要 SpinNoIrq 锁，违反 ISR 极简），改用 `read_volatile` 读 MMIO 寄存器。
 
 `read_volatile` 防止编译器优化掉寄存器读。
 

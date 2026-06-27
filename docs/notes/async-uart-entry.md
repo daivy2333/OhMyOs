@@ -3,7 +3,7 @@
 **日期**：2026-06-25
 **标签**：rust, async, os, riscv, uart
 
-> 来源：StarryOS `kernel/src/drivers/uart_init.rs:38-73` 通读（行号需人工核对）。
+> 来源：StarryOS `kernel/src/drivers/uart_init.rs:38-73` 通读。
 > 范围：异步串口实现的入口层——模块声明、常量、全局实例。
 
 ## 模块入口
@@ -163,7 +163,7 @@ NS16550 寄存器空间 0x00-0x07 共 8 字节：
 
 不会死锁（`Once` 自旋 + 构造无副作用），但不该这样设计。`init_uart_hardware()` 在 ISR 注册前触发。
 
-**Q3. 为什么 `UART_PORT` 单独做成 `static` 而不直接用 `UART`？**
+**Q3. 为什么 `UART_PORT` 单独做成 `static`，不复用 `UART`？**
 
 `ArceOsUartPort` 多封装了 `ier_cache: AtomicU8`，实现 IER 单 owner 模式。
 
