@@ -4,17 +4,20 @@
 
 > 关联周报：[`weekly-2026-W01`](weekly-2026-W01.md)、[`weekly-2026-W02`](weekly-2026-W02.md)
 
-## 本月主线
+## 当前工作
 
-训练营结束后，节奏从集中冲刺切换为自驱。重心从异步串口本身，转到把 QEMU 路径中的假设逐步推到 Lichee RV Dock 上验证。
+重心从异步串口本身，转到把 QEMU 路径中的假设逐步推到 Lichee RV Dock 上验证，并根据实际面临的各种问题对代码进行优化。
 
-主线三步：
-
+已经做了的：
 1. Q15 增量重集成，稳定异步 UART 的核心改动。
 2. 将原本单一的真板验证目标拆成 Q16~Q23，降低各路径之间的耦合。
 3. 用 Lichee RV Dock 打通 D1 平台 smoke、kbench、userbench，完成 `/dev/console`、TTY、syscall、`tcdrain`、FIONBIO 的端到端验证。
+这周下周将要做的：
+1. 继续真板上的探索，对各种态的测试进行收尾
+2. 确认测试的各种基准，保证qemu和真板可以横向对比，更新测试代码并测试
+3. 为在荔枝派运行os的shell和测试做探索和初步尝试工作
 
-## 阶段进展
+## 进展
 
 | 阶段 | 时间 | 重点 | 结果 |
 |------|------|------|------|
@@ -23,7 +26,7 @@
 | Q19 smoke | 2026-06-28 ~ 2026-06-29 | D1 axplat、boot image、early console、PLIC 前置处理 | 真板输出 `[starry-d1] smoke complete, halting.`（[`4a228be`](https://github.com/daivy2333/StarryOS/commit/4a228be)、[`afafb31`](https://github.com/daivy2333/StarryOS/commit/afafb31)） |
 | Q19B userbench | 2026-06-29 起 | DW APB UART、axfs-ng patch、embedded benchmark loader | 真板跑通 userbench，并拿到 TX / tcdrain / FIONBIO 数据（[`c820567`](https://github.com/daivy2333/StarryOS/commit/c820567)、[`4ba2f75`](https://github.com/daivy2333/StarryOS/commit/4ba2f75)） |
 
-## 关键产出
+## 产出
 
 - 建立训练营后的学习记录站：`OhMyOs` 用 MkDocs Material + GitHub Pages 承载周报、月报和学习笔记。
 - 完成 Q15 异步 UART 增量重集成：M0 witness layer（[`b1492a5`](https://github.com/daivy2333/StarryOS/commit/b1492a5)）、TX completion drain（[`4923cd2`](https://github.com/daivy2333/StarryOS/commit/4923cd2)）、TtyWrite short-write（[`529c414`](https://github.com/daivy2333/StarryOS/commit/529c414)）、IER single owner（[`4923cd2`](https://github.com/daivy2333/StarryOS/commit/4923cd2)）等改动的验证边界已明确。
@@ -52,7 +55,7 @@
 
 **第二阶段**：移植到 K3 开发板，在 StarryOS 上使串口工作，支持多核。荔枝派的经验加上前人的探索资料应能加速推进；多核环境会暴露新问题。该阶段完成时，对异步串口开发做总结。
 
-**第三阶段**：参与 K3 上网络驱动相关工作。第二阶段完成后，应能更好地理解该工作。
+**第三阶段**：参与 K3 上网络驱动相关工作。第二阶段完成后，应能更好地理解该工作该怎么进行，当前也不敢说大话。
 
 ## 参考
 
