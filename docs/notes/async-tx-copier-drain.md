@@ -129,3 +129,79 @@ QEMU 掩盖 THRE 边沿丢失。D1 真板上 64B 小包退化为 8.8% 线速，�
 - 评估 flush：是否覆盖四阶段？register-then-recheck 顺序对没？
 - THRE/TEMT 不能互换；flush 必须等 TEMT
 - 真板 quirk 在软件层补：D1 THRE 边沿丢失靠 software wake 兜底
+
+## 补充
+
+字节生命周期 6 状态：[1] 应用层 buf；[2] TX ring；[3] staged（copier 内 `write_buf`）；[4] UART THR FIFO；[5] 移位寄存器；[6] 线缆。
+
+| 阶段 | 谁推进 | 何时确认完成 |
+|---|---|---|
+| 2→3 | TX copier（`pop_batch`）| 函数返回的 `n` |
+| 3→4 | TX copier（`send_bytes`）| 函数返回的 `n`；FIFO 有空才接受 |
+| 4→5 | UART 硬件自动 | 不可观测，靠 `THRE` 推断 |
+| 5→6 | UART 硬件自动 | 仅 `TEMT` 可信 |
+
+`THRE` 只说明 FIFO 不满（可继续 send_bytes）。`TEMT` 才说明移位寄存器已空（最后一字节离片）。
+
+四阶段 drain 字段与字节状态对应：
+
+| 字段 | 对应状态 |
+|---|---|
+| `ring_empty` | [1]→[2] 没新字节 |
+| `!copier_active` | copier 不会从 [2] 取新字节 |
+| `staged_bytes == 0` | [3] 无字节等进 FIFO |
+| `transmitter_empty` | [4] FIFO 与 [5] 移位寄存器全空 |
+
+四条件全 AND = 应用层之后无字节处在 [1]→[6] 任一阶段。
+
+`copier_active` 真实语义：表示「copier 当前是否在 poll 内部」，不是「是否被调度」。
+
+| 时机 | `tx_copier_active` |
+|---|---|
+| copier 进入 `poll_fn` 入口 | `store(true, Release)` |
+| copier 在 `poll_fn` 内推进 | `true` |
+| copier 在 `poll_fn` 内将 `return Pending` | `store(false, Release)` |
+| copier 在 `poll_fn` 内返回 `Ready(())` | 保持 `true`（外层 loop 立刻再进 poll）|
+| copier task 完全退出 | 不会发生（`tx_copier_loop` 是 `loop{}`）|
+
+flush 等待 `!copier_active` 是「copier 已决定 sleep 等待 IRQ」。
+
+flush 的两个 waker：flush 同时注册 `tx.register_waker` 与 `DRAIN_WAKER`，覆盖软件与硬件两侧：
+
+| waker | wake 触发 | 含义 |
+|---|---|---|
+| `tx.register_waker` | `pop_batch` 时 `tx.poll.wake()`（`ring_buffer.rs:202-204`）| 软件路径还在前进 |
+| `DRAIN_WAKER` | `isr.rs:99`、`d1_uart.rs:208`、`driver.rs:373` | TX 完成或即将 TEMT |
+
+recheck 为什么必要：「register 之前刚好 wake 了」是一个 race：
+
+```
+t1: copier 完成最后 send_bytes，DRAIN_WAKER.wake()
+t2: flush 调 tx_completion，未 drained
+t3: flush 注册 waker（wake 已发生，无意义）
+t4: flush recheck → drained → return Ready
+```
+
+不先 register 再 recheck：t1 wake → t2 flush tx_completion 未 drained → t3 注册 → 永远等不到。
+
+QEMU vs D1 真板 drain 差异：
+
+| 维度 | QEMU NS16550 | D1 DW APB UART |
+|---|---|---|
+| THRE 触发 | 稳定每次触发 | 边沿可能丢失 |
+| TEMT 检测 | 正常 | 正常但 wake 路径不可靠 |
+| 兜底 | — | `update_ier(THR_EMPTY)` 后 software wake（`d1_uart.rs:171-181`）|
+
+QEMU 稳定；D1 不靠 software wake 兜底会 flush 永久 Pending。
+
+64B 短包为何退化：长包 copier 持续 fast retry 内部掩盖 THRE 边沿丢失；短包每次进/出 poll 都有 THRE 边沿处理路径。Q19C 调研 64B 仅 8.8% 线速与此相关。D1 真板靠 `d1_uart.rs:171-181` 部分修复；QEMU 默认不开此路径，故 QEMU 退化为表象。
+
+易错点扩展：
+
+| 误判 | 真相 |
+|---|---|
+| `THRE=1` 就是发完 | `THRE=1` 只说明 FIFO 可写 |
+| `ring_empty` 就够 | 软件侧空，硬件侧可能还在 |
+| `flush` 立刻返回 = bug | Pending 是协作式让出 |
+| `tx_copier_active` 表示调度态 | 表示「copier 是否在 poll 内部」|
+| QEMU drain OK = D1 也 OK | D1 边沿丢失，必须 software wake 兜底 |
