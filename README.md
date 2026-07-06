@@ -21,16 +21,21 @@ OhMyOs/
 ├── requirements.txt              # Python 依赖
 ├── docs/
 │   ├── index.md                  # 首页（索引表由脚本填充）
-│   ├── weeks/                    # 周报
-│   │   └── weekly-2026-WXX.md
+│   ├── weeks/                    # 周报 / 月报
+│   │   ├── weekly-2026-WXX.md
+│   │   ├── monthly-YYYY-MM.md
+│   │   └── monthly-YYYY-MXX.md
 │   └── notes/                    # 学习笔记
 │       └── 任意文件名.md
 └── README.md
 ```
 
-## 新增周报
+## 新增周报 / 月报
 
-在 `docs/weeks/` 下新建文件，命名固定为 `weekly-YYYY-WXX.md`（如 `weekly-2026-W02.md`）：
+在 `docs/weeks/` 下新建 `.md` 文件。周报建议命名为 `weekly-YYYY-WXX.md`（如 `weekly-2026-W02.md`）。月报有两种命名：
+
+- 自然月月报：`monthly-YYYY-MM.md`，如 `monthly-2026-07.md`
+- 阶段月报：`monthly-YYYY-MXX.md`，如 `monthly-2026-M00.md`
 
 ```markdown
 # W02 - 一句话主题
@@ -42,7 +47,8 @@ OhMyOs/
 
 - 第一行 `#` 标题 → 自动提取到索引表「主题」列
 - `**周期**：` 行 → 自动提取到索引表「周期」列
-- 文件名中的 `WXX` → 自动提取到索引表「周次」列
+- 文件名前缀 `weekly` / `monthly` → 自动提取到索引表「类型」列
+- 文件名中的 `WXX`、`MXX` 或 `monthly-YYYY-MM` → 自动提取到索引表「编号」列
 
 push 后索引表和侧栏导航自动更新，无需手动改任何配置。
 
@@ -69,7 +75,7 @@ push 后索引表和侧栏导航自动更新，无需手动改任何配置。
 
 `scripts/generate.py` 在每次构建前运行，做的事：
 
-1. 扫描 `docs/weeks/` 下所有 `weekly-*.md`，提取周次、标题、周期
+1. 扫描 `docs/weeks/` 下所有 `*.md`，提取类型、编号、标题、周期
 2. 扫描 `docs/notes/` 下所有 `*.md`，提取标题、日期、标签
 3. 生成 `docs/index.md` 中的索引表（两个模块各一个表格，含表头和数据行）
 4. 更新 `mkdocs.yml` 的 `nav` 导航（两个折叠组）
