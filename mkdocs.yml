@@ -44,12 +44,20 @@ theme:
 
 nav:
   - 首页: index.md
-  - 周报索引:
+  - 报告索引:
       # NAV_WEEKS_START
+      - W03 - Lichee RV Dock 真板 Q19B userbench 完成: weeks/weekly-2026-W03.md
+      - W02 - Lichee RV Dock 真板 smoke 完成（Q16-Q19）: weeks/weekly-2026-W02.md
       - W00 - 训练营后第一周: weeks/weekly-2026-W00.md
+      - M00 - 训练营后自驱阶段启动月: weeks/monthly-2026-M00.md
+      - W01 - Q15 收尾 + Q6/Q16/Q17 准备: weeks/weekly-2026-W01.md
       # NAV_WEEKS_END
   - 学习笔记:
       # NAV_NOTES_START
+      - 异步 RX 侧 NAPI 状态机与 spawn 任务: notes/async-rx-napi-and-spawn.md
+      - 异步 TX 侧四阶段 drain 与 fast retry: notes/async-tx-copier-drain.md
+      - VFS 接口 + flush 实现路径: notes/async-vfs-flush-path.md
+      - Async/Await 异步运行时: notes/async-await-runtime.md
       - 异步驱动的泛型与 Trait 抽象: notes/async-driver-generics.md
       - 异步驱动的线程安全: notes/async-driver-thread-safety.md
       - 异步串口入口与全局实例: notes/async-uart-entry.md
@@ -57,7 +65,10 @@ nav:
       - ISR 极简 4 步流程: notes/isr-minimal-4-step.md
       - 内存序：QEMU 掩盖的真板陷阱: notes/memory-ordering-smp.md
       - Rust 异步驱动语言特性: notes/rust-async-driver-basics.md
-      - Rust 异步编程核心概念: notes/rust-async.md
+      - Lichee RV Dock 适配前期准备: notes/lichee-adaptation-prework.md
+      - Lichee Q19B kbench/userbench 问题与解决: notes/lichee-q19b-benchmark-problems-solutions.md
+      - Lichee RV Dock Smoke 前问题清单: notes/lichee-smoke-problems.md
+      - Lichee RV Dock Smoke 解决路径: notes/lichee-smoke-solutions.md
       # NAV_NOTES_END
 
 plugins:
