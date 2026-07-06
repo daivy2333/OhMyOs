@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate index & nav from weeks/
+      - name: Generate index & nav
         run: python scripts/generate.py
 
       - name: Build site

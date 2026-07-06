@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WEEKS_DIR = ROOT / "docs" / "weeks"
+REPORTS_DIR = ROOT / "docs" / "weeks"
 NOTES_DIR = ROOT / "docs" / "notes"
 INDEX_MD = ROOT / "docs" / "index.md"
 MKDOCS_YML = ROOT / "mkdocs.yml"
@@ -16,16 +16,38 @@ def rel_link(filepath: Path) -> str:
     return str(rel.with_suffix("")).replace("\\", "/")
 
 
-def extract_week(filepath: Path) -> dict:
+def report_type(filepath: Path) -> str:
+    stem = filepath.stem.lower()
+    if stem.startswith("monthly"):
+        return "月报"
+    if stem.startswith("weekly"):
+        return "周报"
+    return "记录"
+
+
+def report_id(filepath: Path) -> str:
+    name = filepath.name
+    m = re.search(r"(W\d+)\.md$", name)
+    if m:
+        return m.group(1)
+    m = re.search(r"monthly-(\d{4})-(\d{2})\.md$", name)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}"
+    m = re.search(r"(M\d+)\.md$", name)
+    if m:
+        return m.group(1)
+    return filepath.stem
+
+
+def extract_report(filepath: Path) -> dict:
     content = filepath.read_text(encoding="utf-8")
-    m = re.search(r"(W\d+)\.md$", filepath.name)
-    week_num = m.group(1) if m else "??"
     m = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
-    title = m.group(1).strip() if m else week_num
+    title = m.group(1).strip() if m else filepath.stem
     m = re.search(r"\*\*周期\*\*[：:]\s*(.+)", content)
     date_range = m.group(1).strip() if m else ""
     return {
-        "week": week_num,
+        "type": report_type(filepath),
+        "id": report_id(filepath),
         "title": title,
         "date_range": date_range,
         "link": rel_link(filepath),
@@ -33,10 +55,10 @@ def extract_week(filepath: Path) -> dict:
     }
 
 
-def collect_weeks() -> list:
-    weeks = [extract_week(f) for f in sorted(WEEKS_DIR.glob("weekly-*.md"))]
-    weeks.sort(key=lambda w: w["week"], reverse=True)
-    return weeks
+def collect_reports() -> list:
+    reports = [extract_report(f) for f in sorted(REPORTS_DIR.glob("*.md"))]
+    reports.sort(key=lambda r: (r["date_range"], r["id"]), reverse=True)
+    return reports
 
 
 def extract_note(filepath: Path) -> dict:
@@ -62,10 +84,10 @@ def collect_notes() -> list:
     return notes
 
 
-def week_table(weeks: list) -> str:
-    lines = ["| 周次 | 周期 | 主题 |", "| --- | --- | --- |"]
-    for w in weeks:
-        lines.append(f"| [{w['week']}]({w['link']}) | {w['date_range']} | {w['title']} |")
+def report_table(reports: list) -> str:
+    lines = ["| 类型 | 编号 | 周期 | 主题 |", "| --- | --- | --- | --- |"]
+    for r in reports:
+        lines.append(f"| {r['type']} | [{r['id']}]({r['link']}) | {r['date_range']} | {r['title']} |")
     return "\n".join(lines)
 
 
@@ -86,17 +108,17 @@ def patch_section(text: str, marker: str, replacement: str) -> str:
     )
 
 
-def generate_index(weeks: list, notes: list) -> str:
+def generate_index(reports: list, notes: list) -> str:
     content = INDEX_MD.read_text(encoding="utf-8")
-    content = patch_section(content, "WEEKLY_INDEX", week_table(weeks))
+    content = patch_section(content, "WEEKLY_INDEX", report_table(reports))
     content = patch_section(content, "NOTES_INDEX", note_table(notes))
     return content
 
 
-def nav_weeks(weeks: list) -> str:
+def nav_reports(reports: list) -> str:
     lines = []
-    for w in weeks:
-        lines.append(f"      - {w['title']}: weeks/{w['name']}")
+    for r in reports:
+        lines.append(f"      - {r['title']}: weeks/{r['name']}")
     return "\n".join(lines) if lines else ""
 
 
@@ -128,22 +150,22 @@ def patch_nav_section(content: str, marker: str, replacement: str) -> str:
     return "\n".join(lines)
 
 
-def update_mkdocs_nav(weeks: list, notes: list) -> None:
+def update_mkdocs_nav(reports: list, notes: list) -> None:
     content = MKDOCS_YML.read_text(encoding="utf-8")
-    content = patch_nav_section(content, "WEEKS", nav_weeks(weeks))
+    content = patch_nav_section(content, "WEEKS", nav_reports(reports))
     content = patch_nav_section(content, "NOTES", nav_notes(notes))
     MKDOCS_YML.write_text(content, encoding="utf-8")
 
 
 def main():
-    weeks = collect_weeks()
+    reports = collect_reports()
     notes = collect_notes()
 
-    new_index = generate_index(weeks, notes)
+    new_index = generate_index(reports, notes)
     INDEX_MD.write_text(new_index, encoding="utf-8")
-    print(f"✓ 生成 index.md：{len(weeks)} 篇周报 + {len(notes)} 篇笔记")
+    print(f"✓ 生成 index.md：{len(reports)} 篇报告 + {len(notes)} 篇笔记")
 
-    update_mkdocs_nav(weeks, notes)
+    update_mkdocs_nav(reports, notes)
     print(f"✓ 更新 mkdocs.yml 导航")
 
 
