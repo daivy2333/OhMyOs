@@ -1,8 +1,7 @@
 # M00 - 训练营后启动实习中
 
-**周期**：2026-06-21 ~ 2026-07-13（用户态测试大体做完了，还在验证对比总结当中）
 
-> 关联周报：[`weekly-2026-W01`](../weeks/weekly-2026-W01.md)、[`weekly-2026-W02`](../weeks/weekly-2026-W02.md)
+> 关联周报：[`weekly-2026-W01`](../weeks/weekly-2026-W01.md)、[`weekly-2026-W02`](../weeks/weekly-2026-W02.md)、[`weekly-2026-W03`](../weeks/weekly-2026-W03.md)
 
 ## 当前工作
 
@@ -25,6 +24,7 @@
 | Q16~Q18 准备 | 2026-06-27 ~ 2026-06-28 | roadmap 拆分、平台参数解耦、early console 抽象 | QEMU UART facts 从驱动初始化路径中抽离（[`941ad05`](https://github.com/daivy2333/StarryOS/commit/941ad05)） |
 | Q19 smoke | 2026-06-28 ~ 2026-06-29 | D1 axplat、boot image、early console、PLIC 前置处理 | 真板输出 `[starry-d1] smoke complete, halting.`（[`4a228be`](https://github.com/daivy2333/StarryOS/commit/4a228be)、[`afafb31`](https://github.com/daivy2333/StarryOS/commit/afafb31)） |
 | Q19B userbench | 2026-06-29 起 | DW APB UART、axfs-ng patch、embedded benchmark loader | 真板跑通 userbench，并拿到 TX / tcdrain / FIONBIO 数据（[`c820567`](https://github.com/daivy2333/StarryOS/commit/c820567)、[`4ba2f75`](https://github.com/daivy2333/StarryOS/commit/4ba2f75)） |
+| Q19C-M0 benchmark evidence cleanup | 2026-07-07 | benchmark.c 统一、64B 测量污染消除、`send_bytes` 16B FIFO burst、slow-pool + yield 重试 | D1 64B 11.13 KB/s（96.6% 线速），`slow_poll_exh=0`、`yield_exh=0`；P99 长尾根因未探明（[`7a13a46`](https://github.com/daivy2333/StarryOS/commit/7a13a46)、[`217fdd7`](https://github.com/daivy2333/StarryOS/commit/217fdd7)） |
 
 ## 产出
 
@@ -33,6 +33,7 @@
 - 完成 Q16~Q23 真板验证拆分，把"等硬件"改成可并行推进的前置探索、平台适配和 gate 验证（[`941ad05`](https://github.com/daivy2333/StarryOS/commit/941ad05)）。
 - 在 Lichee RV Dock 上完成 D1 平台基础 bring-up（[`4a228be`](https://github.com/daivy2333/StarryOS/commit/4a228be)），解决 boot image、PTE 属性、IRQ stub、virtio/PCI 隔离等真板问题。
 - 完成 Q19B embedded `benchmark.elf` userbench 路径（[`4ba2f75`](https://github.com/daivy2333/StarryOS/commit/4ba2f75)），验证异步 UART 与用户态 runtime 的关键链路。
+- 完成 Q19C-M0 benchmark evidence cleanup：统一 QEMU/D1 benchmark manifest。消除 64B stdout backlog 测量污染；`send_bytes` 16B FIFO burst + OPOST/ONLCR short-write 修复；TX copier slow-pool + yield 重试（[`7a13a46`](https://github.com/daivy2333/StarryOS/commit/7a13a46)、[`217fdd7`](https://github.com/daivy2333/StarryOS/commit/217fdd7)）。
 
 ## 主要问题与修复
 
@@ -46,6 +47,10 @@
 | embedded ELF 带 relocation | loader 跳转到异常地址 | 使用 `-static -no-pie -fno-pie -s` 生成 ET_EXEC（[`4ba2f75`](https://github.com/daivy2333/StarryOS/commit/4ba2f75)） |
 | THRE 边沿丢失 | 真板 `tcdrain` 不返回 | 启用 THRE 时基于 LSR 软件补 wake（[`b1d15e3`](https://github.com/daivy2333/StarryOS/commit/b1d15e3)） |
 | drain 覆盖不完整 | TX staged / TEMT 变化未唤醒等待者 | `flush()` 注册 `DRAIN_WAKER`，TX copier 在最后阶段主动 wake（[`b1d15e3`](https://github.com/daivy2333/StarryOS/commit/b1d15e3)） |
+| 64B stdout backlog 测量污染 | D1 64B `write+tcdrain` 约 1 KB/s（8.8% 线速） | 每节开始加 `fflush(stdout); tcdrain(STDOUT_FILENO)` 并打印 pre-drain。隔离后 D1 64B 达 11.13 KB/s（96.6% 线速）（[`7a13a46`](https://github.com/daivy2333/StarryOS/commit/7a13a46)） |
+| `send_bytes` 单字节发送 | `hw_send_max_chunk` 限为 1，1024B S11 正确发送失败 | 启用 THRE 后一次填最多 16B FIFO；`TX_FIFO_SIZE=16`（[`7a13a46`](https://github.com/daivy2333/StarryOS/commit/7a13a46)） |
+| OPOST/ONLCR short-write 计数错误 | S11 1024B `short_writes` 高数字 | `Tty::write` 用 `complete_at_prefix` 数组精确定位 short-write 边界（[`7a13a46`](https://github.com/daivy2333/StarryOS/commit/7a13a46)） |
+| TX copier budget exhausted 卡死 | fast retry 32 次失败后无 fallback，benchmark 启动卡住 | 引入 bounded slow-pool（`TX_SLOW_POLL_LIMIT=4096` × `TX_SLOW_POLL_SPINS=256`），失败后再 yield 重试（`TX_YIELD_RETRIES=4`）（[`217fdd7`](https://github.com/daivy2333/StarryOS/commit/217fdd7)） |
 
 ## 实习初步计划
 
@@ -63,3 +68,4 @@
 
 - [`weekly-2026-W01`](../weeks/weekly-2026-W01.md)：Q15 收尾 + Q6/Q16/Q17 准备
 - [`weekly-2026-W02`](../weeks/weekly-2026-W02.md)：Lichee RV Dock 真板 smoke 完成
+- [`weekly-2026-W03`](../weeks/weekly-2026-W03.md)：Q19B userbench 完成 + Q19C-M0 benchmark evidence cleanup
