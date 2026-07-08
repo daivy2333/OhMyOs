@@ -184,3 +184,120 @@ O48/O49/O50 那组（架构债务清理）有「重复实现去除」一项。�
 - syscall 硬编码拦截 = 实施快、架构债重
 - 单一事实来源被破坏时，「打补丁 + 留 ADR 标注」是必要的善后
 - 评估 tcdrain 实现时，先 grep `0x5409` 或 `TCSBRK` 看是不是硬编码
+
+## 深挖补充
+
+**TtyWrite 不实现 flush 的设计意图**
+
+TtyWrite trait 注释（`crates/uart_16550/src/tty.rs:243-260`）明确「non-blocking」。TtyWrite 只承诺「能塞多少塞多少」，不承诺「等发送完成」。
+
+教科书分层：
+- TtyWrite 同步非阻塞：当下能写多少
+- `embedded_io_async::Write` 异步：何时写完
+
+Tty 抽象留白是有意。flush 由异步层负责。
+
+**为什么不把 flush 加到 TtyWrite**
+
+两个问题：
+
+1. 破坏 TtyWrite 同步非阻塞契约。flush 该返回 `Result<(), _>` 还是 `AsyncResult`？前者要求阻塞。
+2. PTY master / slave 需要不同 flush 语义。master 不需要等发送完成；slave 需要。这种差异在 TtyWrite 上不好表达。
+
+`embedded_io_async::Write::flush` 是 async fn，回调能自然适配。当前只有 `AsyncUartWriter` 实现了，PTY 还没接 flush。
+
+**flush 失败如何处理**
+
+UART 错误（overrun、parity、frame）当前被吞：
+
+- `AsyncUartWriter::flush` 返回 `Infallible`（永不错误）
+- syscall 层 TCSBRK 返回 `Ok(0isize)`
+
+错误在 ISR 处理，不上报到 flush 路径。教科书设计应报告错误给应用层，当前实施简化。这是 Q22 维护性清理候选。
+
+**教科书设计 vs 实际实现**
+
+教科书「tcdrain 走 TTY 抽象」：
+
+```
+用户 tcdrain(fd)
+  ↓
+syscall → FileLike::ioctl
+  ↓
+Tty::ioctl(TCSBRK)
+  ↓
+embedded_io_async::Write::flush
+  ↓
+register-then-recheck
+  ↓
+硬件 drain
+```
+
+StarryOS 实际「tcdrain 走 syscall 硬编码」：
+
+```
+用户 tcdrain(fd)
+  ↓
+syscall ioctl(0x5409)
+  ↓
+sys_ioctl 硬编码拦截
+  ↓（绕过 Tty 抽象）
+调 driver.tx_completion
+  ↓
+block_on → register-then-recheck
+  ↓
+硬件 drain
+```
+
+差异：教科书 5 层抽象层次清晰。StarryOS 4 层（少 Tty::ioctl 翻译层）+ driver 被硬编码。
+
+触发原因：Q19B 真板 tcdrain 必须通过，最快路径。
+
+**架构债的识别与偿还**
+
+何时偿还 TCSBRK 双份实现？「现在」vs「Q22 维护性清理」：
+
+| 维度 | 现在 | Q22 |
+|---|---|---|
+| 风险 | 真板验证期间改动可能引入新 bug | 验证已通过，改动风险低 |
+| 成本 | 跟当前验证并行 | 单独 milestone |
+| 收益 | 立即去除双份实现 | 与其他维护性债务一起处理 |
+| 阻塞 | 不阻塞 Q19B | 不阻塞主功能线 |
+
+当前选 Q22 延后是合理工程判断。两个先决条件：
+
+1. ADR 标注清楚——记录 TCSBRK 硬编码是临时方案。当前 ADR-051 没明确写这条，需要补。
+2. grep 找得到。`kernel/src/syscall/fs/ctl.rs:43` 注释「TCSBRK (0x5409): tcdrain」是充分提示。
+
+加新 TTY 后端（PTY、socket）时必须重新评估。硬编码拦不住新后端，会暴露「非 UART 不能 tcdrain」的问题。
+
+**什么时候该重写 vs 保留**
+
+「实施快、架构债重」是工程常态。判断何时偿还：
+
+| 信号 | 行动 |
+|---|---|
+| 同一处债出现 3 次 | 必须重写 |
+| 债导致新功能不能加 | 必须重写 |
+| 债只在文档里 | 保持 + ADR 标注 |
+| 债影响调试效率 | 必须重写 |
+
+TCSBRK 双份实现目前是「债只在文档里」。代码重复但功能正常，调试靠 grep 找得到。Q22 处理合理。
+
+**易错点（笔记之外）**
+
+| 误判 | 真相 |
+|---|---|
+| 教科书设计 = 正确设计 | 教科书完整但实施成本高 |
+| 实施快 = 债 | 工程常态，需 ADR 标注 |
+| flush 永远成功 | UART 硬件错误当前被吞 |
+| 抽象层加 flush = 好事 | 破坏 TtyWrite 同步非阻塞契约 |
+| 5 层都齐 = 完备 | 完备 = 满足需求，不多不少 |
+
+**经验（笔记之外）**
+
+- 教科书设计完整但实施成本高，工程取舍优先
+- 「实施快 + ADR 标注 + grep 找得到」是工程常态
+- 架构纯洁不是每个项目都负担得起
+- TtyWrite 同步非阻塞契约是有意设计，flush 不该破坏
+- 加新 TTY 后端是 TCSBRK 双份实现必须重写的临界点
