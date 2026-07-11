@@ -1,20 +1,20 @@
-# W03 - Q19B userbench 完成 + Q19C-M0 benchmark evidence cleanup
+# W03 - Q19B userbench → Q19C 全链路收尾
 
-**周期**：2026-07-05 ~ 2026-07-13
+**周期**：2026-07-05 ~ 2026-07-11
 
 > 分支：`uart-16550-lichee`（领先 origin 10 commits）
 >
-> 提交数：11 个（5 个 DW APB UART / axfs-ng / loader + 4 个 repo + 2 个 docs）
+> 提交数：20 个
 >
-> 代码定位：所有 `path:L{N}` 引用均指向 `uart-16550-lichee` 分支当前 HEAD `217fdd7`；commit 链接用短 SHA 7 位
+> 代码定位：commit 链接用短 SHA 7 位；M0 段指向 HEAD `217fdd7`，M1/M2/M3 段指向 HEAD `6998e09`
 
 ## 上下文
 
-阶段一+二（Q16-Q19 smoke）已在真板输出 `[starry-d1] smoke complete, halting.`。本文记录：阶段二剩余方案延伸、阶段三（Q19B）完整交付、阶段四（Q19C-M0）benchmark evidence cleanup。
+阶段一+二（Q16-Q19 smoke）已在真板输出 `[starry-d1] smoke complete, halting.`。本文记录：阶段三（Q19B）benchmark 交付、阶段四（Q19C-M0）evidence cleanup、Q19C-M1 memory-root path loader、M2 command-entry、M3 收尾与 closeout。
 
 阶段三目标：在真板跑通 embedded `benchmark.elf`，验证 `/dev/console`、TTY、syscall、`tcdrain`、FIONBIO 全链路。
 
-阶段四目标：统一 QEMU/D1 benchmark manifest，消除测量污染。诊断 D1 TX zero-send/P99 长尾，实施 slow-pool + yield 重试 fallback。
+阶段四目标：统一 QEMU/D1 benchmark manifest，消除测量污染，通过 memory-root 路径完成 D1 真板全链路 benchmark 验证，正式结束 D1 async UART 测试。
 
 详见 [`weekly-2026-W02`](weekly-2026-W02.md) 的 Q19 smoke 收尾状态。
 
@@ -318,22 +318,100 @@ D1 真板最终性能（Q19C.8e 后）：
 - L259-L266：Q19C 路径差异 + fullbench feature 边界 + rootfs provider 分层 + benchmark 证据口径 + 64B 测量污染 + TX drain/THRE 长尾排查
 - L275：Q19C.8e slow-pool + yield 重试真板验证结果（slow_poll_exh=0 证明 slow-pool 100% 成功，P99 根因未探明）
 
+## Q19C-M1：memory-root path loader（2026-07-08）
+
+Q19C-M0 在 QEMU rootfs 跑通后，M1 在 D1 真板通过 memory-root 路径加载 `/bin/benchmark`。
+
+**实施**：
+
+- 新增 Make 目标 `lichee-fullbench-mem`：`cp benchmark.elf disk.img` 挂载为 ramfs `/bin/benchmark`
+- `ArceOsD1App::resolve_path("/bin/benchmark")` → `FS_CONTEXT.resolve()` → `load_user_app()` 路径
+- `load_user_app()` 新增 eager ELF mapping 分支：读取全部 segment 数据后一次性映射用户页表，再 `uspace.write()`。避免 lazy file-backed COW 路径
+- `lichee-fullbench-mem` feature gate 排除 virtio/display/net 模块，与 userbench 一致
+
+**踩坑：lazy file-backed COW 导致 SIGILL**
+
+`load_user_app()` 走 lazy 路径时，第一次缺页由 `handle_page_fault()` 从 ramfs inode 读文件内容填页。D1 上 `main` 前触发 SIGILL，根因未定位到具体缺失的映射或权限位。绕过方案是 eager mapping 一次性填好所有页。
+
+此问题不影响 async UART 验证——benchmark 通过 eager path 正常运行。
+
+**输出**：
+
+```
+[starry-d1] fullbench memory-root start
+[starry-d1] resolved /bin/benchmark -> load_user_app (eager)
+... benchmark sections ...
+Done.
+benchmark exited with code: 0
+[starry-d1] halting.
+```
+
+commit [`587ec7c`](https://github.com/daivy2333/StarryOS/commit/587ec7c)，分析文档 [`.claude/analysis/q19c-m1-memory-root-path-loader.md`](https://github.com/daivy2333/StarryOS/blob/6998e09/.claude/analysis/q19c-m1-memory-root-path-loader.md)。
+
+## Q19C-M2：command-entry 模式（2026-07-11）
+
+M1 通过 `/bin/benchmark` 文件名解析加载，M2 新增 command-entry 模式：内核直接调用 benchmark 入口，不经过 VFS 路径解析。
+
+- 新增 Make 目标 `lichee-memory-root-command`，feature `lichee-d1-fullbench-cmd`
+- `kernel/src/entry.rs` 三路分发：smoke / userbench / fullbench-cmd（[`6998e09`](https://github.com/daivy2333/StarryOS/commit/6998e09)）
+- 完整 benchmark sections 输出，`benchmark exited with code: 0`
+
+归档为 [`openspec/changes/archive/2026-07-11-q19c-m2-m3-acceptance-alignment/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-11-q19c-m2-m3-acceptance-alignment)。
+
+## Q19C-M3：rootfs-probe 删除（2026-07-11）
+
+Q19C 原计划 M3 做 D1 SDMMC probe-only（`d1_sdmmc_controller_base` 识别 + block device 注册探测），真板日志只到 `d1_sdmmc_controller_base=TBD`，未输出 probe table。
+
+方向更新后 M3 不再作为 UART gate：
+
+- 删除 `lichee-d1-rootfs-probe` feature（`kernel/Cargo.toml`）
+- 删除对应 Makefile target 与 `kernel/src/entry.rs` 分支
+- 删除 `kernel/src/lib.rs` 中 cfg 例外
+- 旧方案归档到 [`openspec/changes/archive/2026-07-11-q19c-m3-polling-console-isolation/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-11-q19c-m3-polling-console-isolation)（未合入主 spec）
+
+## Q19C 收尾（2026-07-11）
+
+D1 真板异步 UART 测试正式结束。收尾动作：
+
+- `q19c-m2-m3-acceptance-alignment`、`q19c-lichee-full-starryos-benchmark`、`q19c-async-uart-closeout` 三个 change 归档
+- 证据表（M1 eager path、M2 command-entry）补入 `openspec/specs/lichee-d1-fullbench/spec.md`
+- Q19D SDMMC/rootfs 取消当前规划。若以后需要真实 storage/rootfs bring-up，重新 propose
+
+归档入口：`openspec/changes/archive/2026-07-11-ARC-202607111510/proposal.md`。
+
+## Q19C-M1/M2/M3 产出位置
+
+| 路径 | 用途 | 关键 commit |
+|------|------|-------------|
+| `kernel/src/entry.rs` | M1 path loader + M2 command-entry 分发 | [`6998e09`](https://github.com/daivy2333/StarryOS/commit/6998e09) |
+| `kernel/src/mm/loader.rs` | eager ELF mapping 分支 | [`587ec7c`](https://github.com/daivy2333/StarryOS/commit/587ec7c) |
+| `kernel/Cargo.toml` | `lichee-d1-fullbench-mem` / `lichee-d1-fullbench-cmd` feature | [`6998e09`](https://github.com/daivy2333/StarryOS/commit/6998e09) |
+| `Makefile` | `lichee-fullbench-mem` / `lichee-memory-root-command` target | [`6998e09`](https://github.com/daivy2333/StarryOS/commit/6998e09) |
+| `openspec/specs/lichee-d1-fullbench/spec.md` | M1/M2 证据表 | [`6998e09`](https://github.com/daivy2333/StarryOS/commit/6998e09) |
+
+## learned 条目（Q19C-M1/M2/M3 新增）
+
+- L277：lazy file-backed COW → SIGILL on D1，eager ELF mapping 绕过（[`587ec7c`](https://github.com/daivy2333/StarryOS/commit/587ec7c)）
+- L278-L280：M1 memory-root path loader 完成（resolve + load_user_app eager）、M2 command-entry 完成（benchmark exit 0）、M3 rootfs-probe 删除（未合入主 spec）
+
 ## 当前状态
 
-- Q19/Q19B 已完成真板验证并归档。
-- Q17 QEMU 修复完成（`ier_cache` RMW 临界区 + TX completion 原子序），多 hart stress 待 Q20。
-- Q19C-M0 已完成（benchmark evidence cleanup + slow-pool + yield 重试，P99 长尾根因未探明，暂不继续优化）。
-- Q19C M1 memory-root path loader 是下一步（`/bin/benchmark` 通过 `FS_CONTEXT.resolve()` + `load_user_app()`）。
-- Q19D 真实 D1 SDMMC/rootfs 已登记为后续方向。
+- Q19/Q19B/Q19C 已全部完成并归档。D1 真板异步 UART 测试正式结束。
+- 活跃 OpenSpec change 仅剩 `q17-smp-memory-ordering`（18/19 tasks）。
+- Q17 QEMU 修复完成，多 hart stress 待 Q20 VisionFive2 验证。
+- Q19D SDMMC/rootfs 取消当前规划。
 - Q20 VisionFive2 UART 验证等待硬件。
 
 ## 参考
 
 - 前序：见 [`weekly-2026-W02`](weekly-2026-W02.md)
 - `docs/licheerv-dock-bringup.md`：流程笔记（2026-06-28 起持续更新）
-- [`openspec/changes/q19-lichee-d1-early-smoke/`](https://github.com/daivy2333/StarryOS/tree/217fdd7/openspec/changes/q19-lichee-d1-early-smoke)：Q19 变更提案
-- [`openspec/changes/q19b-lichee-d1-benchmark/`](https://github.com/daivy2333/StarryOS/tree/217fdd7/openspec/changes/q19b-lichee-d1-benchmark)：Q19B 变更提案
-- `.claude/analysis/q19b-current-blockers.md`：Q19B 阻塞分析
-- `.claude/analysis/q19b-lichee-benchmark-plan.md`：Q19B benchmark 方案
-- `openspec/specs/learned/spec.md` L213-L258：踩坑与经验
-- `openspec/specs/architecture/spec.md` A040-A051：相关 ADR
+- Q19 归档：[`openspec/changes/archive/2026-07-02-q19-lichee-d1-early-smoke/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-02-q19-lichee-d1-early-smoke)
+- Q19B 归档：[`openspec/changes/archive/2026-07-02-q19b-lichee-d1-benchmark/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-02-q19b-lichee-d1-benchmark)
+- Q19C 收尾归档：[`openspec/changes/archive/2026-07-11-ARC-202607111510/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-11-ARC-202607111510)
+- Q19C closeout：[`openspec/changes/archive/2026-07-11-q19c-async-uart-closeout/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-11-q19c-async-uart-closeout)
+- Q19C M2/M3 对齐：[`openspec/changes/archive/2026-07-11-q19c-m2-m3-acceptance-alignment/`](https://github.com/daivy2333/StarryOS/tree/6998e09/openspec/changes/archive/2026-07-11-q19c-m2-m3-acceptance-alignment)
+- Q19C-M1 分析：[`.claude/analysis/q19c-m1-memory-root-path-loader.md`](https://github.com/daivy2333/StarryOS/blob/6998e09/.claude/analysis/q19c-m1-memory-root-path-loader.md)
+- Q19C-M2 分析：[`.claude/analysis/q19c-m2-m3-shell-sdmmc-probe.md`](https://github.com/daivy2333/StarryOS/blob/6998e09/.claude/analysis/q19c-m2-m3-shell-sdmmc-probe.md)
+- `openspec/specs/learned/spec.md` L213-L280：踩坑与经验
+- `openspec/specs/architecture/spec.md` A040-A052：相关 ADR
