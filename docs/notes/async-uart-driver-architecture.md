@@ -3,7 +3,7 @@
 **标签**：rust, async, uart, driver, ring-buffer, spsc, io-uring
 
 > 来源：StarryOS `crates/uart_16550/src/async_/`（`driver.rs`、`ring_buffer.rs`、`isr.rs`、`device_ops.rs`）。
-> 驱动已基本定型，后续主要是性能优化和小修改。本文记录核心数据结构和算法，不涉及 OS 适配层细节。
+> 驱动已基本定型，后续主要是性能优化和小修改。文档记录环形缓冲区、copier 任务、ISR→waker 机制的设计与算法，不涉及 OS 适配层细节。
 
 ## 数据流全景
 
@@ -137,8 +137,4 @@ ISR 不做任何数据搬运——读硬件 FIFO、写 ring buffer 全在 copier
 
 ## 参考
 
-- `crates/uart_16550/src/async_/driver.rs`：copier 循环、drain 快照、回退路径
-- `crates/uart_16550/src/async_/ring_buffer.rs`：SPSC 环形缓冲区
-- `crates/uart_16550/src/async_/isr.rs`：ISR + AtomicWaker
-- `crates/uart_16550/src/async_/device_ops.rs`：Writer / Reader API
 - [io_uring 入门](io-uring-intro.md)：同一笔记目录下的 io_uring 原理

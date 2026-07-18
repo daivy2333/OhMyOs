@@ -89,7 +89,7 @@ read(fd2, 16B)  → 预期 EAGAIN
 | `slow_poll_exh` | 0 | slow-poll 回退耗尽次数 |
 | `yield_exh` | 0 | yield 重试耗尽次数 |
 
-`hw_send_zero` 很高不等于 CPU 空转——它是 slow-poll 路径下频繁探测 TX FIFO 的观测结果。真正重要的是 `slow_poll_exh=0` 和 `yield_exh=0`：说明分层回退机制在本轮测试中始终在 slow-poll 阶段成功，从未落到更重的回退路径。
+`hw_send_zero` 很高不等于 CPU 空转——它是 slow-poll 路径下频繁探测 TX FIFO 的观测结果。`slow_poll_exh=0` 和 `yield_exh=0` 表示回退未触发：本轮测试中 slow-poll 阶段始终成功，从未落到更重的回退路径。
 
 ### 启动阶段 ring buffer benchmark
 
