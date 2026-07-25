@@ -2,7 +2,7 @@
 
 **标签**：benchmark, performance, uart, latency, throughput, testing
 
-> 来源：StarryOS `docs/benchmark-report-async.md`（2026-07-13）、`tests/benchmark.c`。
+> 来源：StarryOS `docs/benchmark-report-async.md`（2026-07-22，含 Q31/Q32 CPU 效率补充）、`tests/benchmark.c`。
 > 数据采集平台：QEMU（NS16550，无物理线延迟）+ D1 真板（DW APB UART，115200 bps）。
 
 ## 测试设计思路
@@ -97,6 +97,46 @@ read(fd2, 16B)  → 预期 EAGAIN
 
 D1 结果：TX ring buffer write 1,155,388 KB/s，RX ring buffer read 8,303,062 KB/s。这些数字说明驱动内部队列的处理能力远高于物理线速——用户态吞吐以线速为准是硬件限制，不是驱动限制。
 
+### S41：TX CPU Work（inst/byte）
+
+在 `instret`（RISC-V 指令退休计数器）区间内完成 100 次 `write_full()` + `tcdrain()` 完整发送链。64B/256B/1024B 三种 payload 各测 5 轮，取 median。
+
+**测什么**：每发送一字节平均消耗多少条 CPU 指令。`instret` 是 hart 全量计数器（含同 hart 上所有背景活动），不是 CPU 占用率百分比。但它能回答"这一千字节的数据搬运花了 CPU 多少力气"，在无法测占用率的环境下是最接近 CPU 开销的 proxy。
+
+**关键发现**：
+
+D1 Console 三条 payload 稳定在约 1100 inst/byte。同步路径 `write() → 查 THRE → 写 THR → 等 TEMT → 返回` 极短，中间不需要 copier 调度、ring buffer 操作、中断唤醒。
+
+D1 async 64B/256B 约 32800 inst/byte，1024B 升至 44716。每字节比 Console 多花 30-40 倍的指令——async 的每项架构能力（ring push、copier 唤醒、ISR 处理、waker 注册、`tcdrain` 等 TEMT）在这个单字节发送的短路上都变成了一份指令开支。1024B 的推高来自 ring backpressure 期间 `tcdrain` 等待 TEMT 的 busy-loop。
+
+QEMU 两组 instret 在 13500-14800 之间，差距小。虚拟 UART 无物理线速限制，qemu-system 自身开销主导，不作为硬件证据。
+
+### S42：TX Compute Overlap
+
+先关掉 UART 测纯计算 idle 基线。再在 64B×100 UART write 窗口内执行同样的 compute kernel，比较可执行的有效计算量，算 overlap efficiency。
+
+**测什么**：`write()` 入队返回后，UART 后台发送期间，CPU 有多少比例的时间可用于执行计算任务。这是 async 架构"提交即返回"优势的量化——之前只能定性说"不阻塞"，现在有具体数字。
+
+**关键发现**：
+
+D1 async `write()` 约 1.6 ms 即返回（仅 ring enqueue），UART 后续用约 554 ms 物理发送全部数据。在这段发送空窗里，CPU 可执行 53.5% 的计算量。也就是说，`write()` 返回后 CPU 还有超过一半的时间能干别的事。
+
+D1 Console `write()` 同步完成耗时约 554 ms——已超过 64B×100 的理论线时 542.5 ms，数据在 `write()` 返回前已发完。overlap=0 不是 bug，是 polling 模式下 `write()` 语义的必然结果：UART 不发送完就不可能返回。
+
+### S43：Timer Wakeup Overshoot
+
+`clock_nanosleep(TIMER_ABSTIME)` 按 5 ms 间隔绝对时间睡眠。idle 组纯睡眠，loaded 组在 4096B burst write 期间睡眠。各测 5 组，每组 50 次采样。
+
+**测什么**：定时器唤醒的调度延迟。idle 组回答"无事时 5 ms 定时能不能准时"，loaded 组回答"UART 正在大量发送时定时器会不会被推迟"。
+
+**关键发现**：
+
+D1 idle P50：Console 8.42 ms，async 9.53 ms——两组接近，无事时唤醒精度相当。
+
+D1 loaded：Console 为 `not-applicable`——同步 `write()` 用约 355 ms 发送 4096B，耗尽整个窗口，不存在"loaded 期间测唤醒"的场景。async loaded P50=25.78 ms，比 idle 的 9.53 ms 明显升高，来自发送积压期的唤醒干扰。
+
+这里暴露了 Console 在 loaded 场景的结构性问题：不是测不到 loaded 数据，而是 loaded 场景本身不存在——只要开始发送，CPU 就被 `write()` 锁死了，没有重叠窗口去观测唤醒偏移。
+
 ## 不做的事情
 
 ### RX fixed payload
@@ -109,7 +149,7 @@ D1 结果：TX ring buffer write 1,155,388 KB/s，RX ring buffer read 8,303,062 
 
 ### CPU 使用率
 
-当前只有行为计数器（`hw_send_zero` 次数、slow-poll 是否耗尽），没有 CPU 时间或利用率数据。计数器可以回答"回退路径是否被触发、是否耗尽"，但不能回答"花费了多少 CPU 时间"。
+S41 用 `instret` 提供了 CPU work proxy（inst/byte），但这是 hart 全量指令计数，不是 CPU 占用率百分比。S40 的行为计数器可以回答"回退路径是否被触发、是否耗尽"，但不能回答"花费了多少 CPU 时间"。StarryOS 当前不支持 per-task CPU time accounting，无法采集真正的 CPU 占用率数据。
 
 ## 参考
 
