@@ -10,3 +10,5 @@ site/
 .vscode/
 *.swp
 *.swo
+/.*
+/linshi/*
