@@ -106,10 +106,10 @@ commit [`636b03b`](https://github.com/daivy2333/StarryOS/commit/636b03b)
 
 ## 参考
 
-- [异步 UART 性能测试设计与结果](../notes/async-uart-benchmark-design.md)
-- [DMA：绕过 CPU 的数据搬运](../notes/dma-intro.md)
-- [MMIO：用 load/store 指令操作硬件](../notes/mmio-intro.md)
-- [Async UART 与 polling Console 性能对比](../notes/async-vs-console-performance.md)
+- [异步 UART 性能测试设计与结果](../notes/异步串口/async-uart-benchmark-design.md)
+- [DMA：绕过 CPU 的数据搬运](../notes/学习内容/dma-intro.md)
+- [MMIO：用 load/store 指令操作硬件](../notes/学习内容/mmio-intro.md)
+- [Async UART 与 polling Console 性能对比](../notes/异步串口/async-vs-console-performance.md)
 - [性能对比报告](https://github.com/daivy2333/StarryOS/blob/uart-lichee/docs/benchmark-report-async.md)
 - [Console QEMU 日志](https://github.com/daivy2333/StarryOS/blob/uart-lichee/docs/qemu_console.md)
 - [Console D1 日志](https://github.com/daivy2333/StarryOS/blob/uart-lichee/docs/d1_console.md)

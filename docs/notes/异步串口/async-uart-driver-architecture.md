@@ -137,4 +137,4 @@ ISR 不做任何数据搬运——读硬件 FIFO、写 ring buffer 全在 copier
 
 ## 参考
 
-- [io_uring 入门](io-uring-intro.md)：同一笔记目录下的 io_uring 原理
+- [io_uring 入门](../学习内容/io-uring-intro.md)：学习笔记分区的 io_uring 原理

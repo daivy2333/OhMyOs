@@ -12,3 +12,4 @@ site/
 *.swo
 /.*
 /linshi/*
+docs/fornow/*

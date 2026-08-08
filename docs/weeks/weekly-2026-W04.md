@@ -67,6 +67,6 @@ commit [`b81f0cd`](https://github.com/daivy2333/StarryOS/commit/b81f0cd)
 
 本周整理了两篇总结性笔记，放在 [`notes/`](../notes/) 下：
 
-- [异步 UART 驱动总体架构](../notes/async-uart-driver-architecture.md)：环形缓冲区、copier 任务、ISR→waker 机制、Writer/Reader unsafe 契约、与 io_uring 的对比与取舍
-- [异步 UART 性能测试设计与结果](../notes/async-uart-benchmark-design.md)：测试设计思路、各 section 测什么及结果含义、边界与不做的事情
+- [异步 UART 驱动总体架构](../notes/异步串口/async-uart-driver-architecture.md)：环形缓冲区、copier 任务、ISR→waker 机制、Writer/Reader unsafe 契约、与 io_uring 的对比与取舍
+- [异步 UART 性能测试设计与结果](../notes/异步串口/async-uart-benchmark-design.md)：测试设计思路、各 section 测什么及结果含义、边界与不做的事情
 - [性能测试报告](https://github.com/daivy2333/StarryOS/blob/7836240/docs/benchmark-report-async.md)

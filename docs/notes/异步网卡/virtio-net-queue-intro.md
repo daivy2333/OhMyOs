@@ -5,7 +5,7 @@
 
 ## 背景：从单个寄存器到环形队列
 
-[MMIO 入门](mmio-intro.md) 讲了 CPU 怎么用 load/store 操作单个硬件寄存器。UART 这类慢设备每次读写一两个字节，一个寄存器就够。网卡一次收发整个包，多则 1500 字节，单寄存器搬不完。
+[MMIO 入门](../学习内容/mmio-intro.md) 讲了 CPU 怎么用 load/store 操作单个硬件寄存器。UART 这类慢设备每次读写一两个字节，一个寄存器就够。网卡一次收发整个包，多则 1500 字节，单寄存器搬不完。
 
 VirtIO 的做法：在内存里放环形队列，driver 和 device 共享。driver 把发包 buffer 指针扔进队列，device 取走发送。device 把收包 buffer 指针扔进另一个队列，driver 取走处理。CPU 不逐字节写硬件，只操作内存中的队列结构。硬件通过队列指针移动感知工作。
 
@@ -194,7 +194,7 @@ QEMU 单核下空闲 CPU 100-111% 是 10ms 兜底的副作用：每 10ms 唤醒�
 
 ## 与 UART 驱动的对比
 
-[异步 UART 驱动](async-uart-driver-architecture.md) 用 SPSC ring buffer + copier task 把用户态字节流搬到硬件 FIFO。VirtIO 网卡结构上像--也是环形队列、也是 driver/device 两侧、也有中断通知。差异在搬运单位：
+[异步 UART 驱动](../异步串口/async-uart-driver-architecture.md) 用 SPSC ring buffer + copier task 把用户态字节流搬到硬件 FIFO。VirtIO 网卡结构上像--也是环形队列、也是 driver/device 两侧、也有中断通知。差异在搬运单位：
 
 | 维度 | UART ring buffer | VirtQueue |
 |---|---|---|
@@ -208,8 +208,8 @@ UART 的 copier task 在 VirtIO 没有对应物。VirtQueue 的搬运由 driver 
 
 ## 参考
 
-- [MMIO：用 load/store 指令操作硬件](mmio-intro.md)
-- [异步 UART 驱动总体架构](async-uart-driver-architecture.md)
+- [MMIO：用 load/store 指令操作硬件](../学习内容/mmio-intro.md)
+- [异步 UART 驱动总体架构](../异步串口/async-uart-driver-architecture.md)
 - StarryOS `crates/axnet/src/device/ethernet.rs`：`EthernetDevice::requires_polling`、`register_waker`
 - StarryOS `crates/axnet/src/service.rs`：`Service::register_waker`、`any_masked_device_requires_polling`
 - OASIS Virtual I/O Device (VirtIO) Specification v1.1：VirtQueue 与 EVENT_IDX 规范

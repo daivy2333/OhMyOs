@@ -108,10 +108,10 @@ commit [`c7df9fb`](https://github.com/daivy2333/StarryOS/commit/c7df9fb)
 
 ## 参考
 
-- [VirtIO 网卡队列机制入门](../notes/virtio-net-queue-intro.md)
-- [smoltcp 接入与 axnet 本地化决策](../notes/axnet-localization-decision.md)
-- [MMIO：用 load/store 指令操作硬件](../notes/mmio-intro.md)
-- [异步 UART 驱动总体架构](../notes/async-uart-driver-architecture.md)
+- [VirtIO 网卡队列机制入门](../notes/异步网卡/virtio-net-queue-intro.md)
+- [smoltcp 接入与 axnet 本地化决策](../notes/异步网卡/axnet-localization-decision.md)
+- [MMIO：用 load/store 指令操作硬件](../notes/学习内容/mmio-intro.md)
+- [异步 UART 驱动总体架构](../notes/异步串口/async-uart-driver-architecture.md)
 - [IRQ + waker 架构分析](https://github.com/daivy2333/StarryOS/blob/c7df9fb/.claude/analysis/starryos-device-specific-irq-waker-architecture.md)
 - [轮询网络验证采集](https://github.com/daivy2333/StarryOS/blob/05dfcfc/.claude/runbooks/ms02-virtio-mmio-evidence.md)
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """扫描 docs/weeks/、docs/months/ 和 docs/notes/，自动生成首页索引和导航。"""
 
+import json
 import re
 from pathlib import Path
 
@@ -15,6 +16,15 @@ MKDOCS_YML = ROOT / "mkdocs.yml"
 def rel_link(filepath: Path) -> str:
     rel = filepath.relative_to(ROOT / "docs")
     return str(rel.with_suffix("")).replace("\\", "/")
+
+
+def doc_path(filepath: Path) -> str:
+    return filepath.relative_to(ROOT / "docs").as_posix()
+
+
+def yaml_string(value: str) -> str:
+    """生成可安全嵌入 YAML 的双引号字符串。"""
+    return json.dumps(value, ensure_ascii=False)
 
 
 def report_id(filepath: Path) -> str:
@@ -56,14 +66,30 @@ def extract_note(filepath: Path) -> dict:
         "title": title,
         "tags": tags,
         "link": rel_link(filepath),
-        "name": filepath.name,
+        "path": doc_path(filepath),
     }
 
 
-def collect_notes() -> list:
-    notes = [extract_note(f) for f in sorted(NOTES_DIR.glob("*.md"))]
-    notes.sort(key=lambda n: n["title"])
+def collect_notes_in(directory: Path) -> list:
+    notes = [extract_note(f) for f in directory.glob("*.md")]
+    notes.sort(key=lambda n: (n["title"], n["path"]))
     return notes
+
+
+def collect_notes() -> dict:
+    default_notes = collect_notes_in(NOTES_DIR)
+    sections = []
+
+    directories = sorted(
+        (path for path in NOTES_DIR.iterdir() if path.is_dir()),
+        key=lambda path: path.name,
+    )
+    for directory in directories:
+        notes = collect_notes_in(directory)
+        if notes:
+            sections.append({"name": directory.name, "notes": notes})
+
+    return {"default": default_notes, "sections": sections}
 
 
 def report_table(reports: list) -> str:
@@ -81,6 +107,17 @@ def note_table(notes: list) -> str:
     return "\n".join(lines)
 
 
+def note_index(notes: dict) -> str:
+    sections = []
+    if notes["default"]:
+        sections.append(note_table(notes["default"]))
+
+    for section in notes["sections"]:
+        sections.append(f"### {section['name']}\n\n{note_table(section['notes'])}")
+
+    return "\n\n".join(sections)
+
+
 def patch_section(text: str, marker: str, replacement: str) -> str:
     return re.sub(
         rf"<!-- {marker}_START -->.*<!-- {marker}_END -->",
@@ -90,23 +127,40 @@ def patch_section(text: str, marker: str, replacement: str) -> str:
     )
 
 
-def generate_index(weeks: list, months: list, notes: list) -> str:
+def generate_index(weeks: list, months: list, notes: dict) -> str:
     content = INDEX_MD.read_text(encoding="utf-8")
     content = patch_section(content, "WEEKLY_INDEX", report_table(weeks))
     content = patch_section(content, "MONTHLY_INDEX", report_table(months))
-    content = patch_section(content, "NOTES_INDEX", note_table(notes))
+    content = patch_section(content, "NOTES_INDEX", note_index(notes))
     return content
 
 
 def nav_items(items: list, directory: str) -> str:
     lines = []
     for item in items:
-        lines.append(f"      - {item['title']}: {directory}/{item['name']}")
+        title = yaml_string(item["title"])
+        path = yaml_string(f"{directory}/{item['name']}")
+        lines.append(f"      - {title}: {path}")
     return "\n".join(lines) if lines else ""
 
 
-def nav_notes(notes: list) -> str:
-    return nav_items(notes, "notes")
+def nav_notes(notes: dict) -> str:
+    lines = []
+
+    for note in notes["default"]:
+        lines.append(
+            f"      - {yaml_string(note['title'])}: {yaml_string(note['path'])}"
+        )
+
+    for section in notes["sections"]:
+        lines.append(f"      - {yaml_string(section['name'])}:")
+        for note in section["notes"]:
+            lines.append(
+                f"          - {yaml_string(note['title'])}: "
+                f"{yaml_string(note['path'])}"
+            )
+
+    return "\n".join(lines)
 
 
 def patch_nav_section(content: str, marker: str, replacement: str) -> str:
@@ -144,7 +198,13 @@ def main():
 
     new_index = generate_index(weeks, months, notes)
     INDEX_MD.write_text(new_index, encoding="utf-8")
-    print(f"✓ 生成 index.md：{len(weeks)} 篇周报 + {len(months)} 篇月报 + {len(notes)} 篇笔记")
+    note_count = len(notes["default"]) + sum(
+        len(section["notes"]) for section in notes["sections"]
+    )
+    print(
+        f"✓ 生成 index.md：{len(weeks)} 篇周报 + {len(months)} 篇月报 "
+        f"+ {note_count} 篇笔记（{len(notes['sections'])} 个分区）"
+    )
 
     update_mkdocs_nav(weeks, months, notes)
     print(f"✓ 更新 mkdocs.yml 导航")

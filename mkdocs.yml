@@ -46,46 +46,51 @@ nav:
   - 首页: index.md
   - 周报索引:
       # NAV_WEEKS_START
-      - W06 - 网卡主线：同步基线 + 轮询基线 + IRQ 诊断启动: weeks/weekly-2026-W06.md
-      - W05 - Console polling 基线 + CPU 效率对比: weeks/weekly-2026-W05.md
-      - W04 - 异步串口契约收敛 + benchmark 补测收尾: weeks/weekly-2026-W04.md
-      - W03 - Q19B userbench → Q19C 全链路收尾: weeks/weekly-2026-W03.md
-      - W02 - Lichee RV Dock 真板 smoke 完成（Q16-Q19）: weeks/weekly-2026-W02.md
-      - W01 - Q15 收尾 + Q6/Q16/Q17 准备: weeks/weekly-2026-W01.md
-      - W00 - 训练营后第一周: weeks/weekly-2026-W00.md
+      - "W07 - 网卡中断诊断 + 性能测试矩阵收口": "weeks/weekly-2026-W07.md"
+      - "W06 - 网卡主线：本地化编译 + 无 IRQ 轮询 + IRQ 诊断启动": "weeks/weekly-2026-W06.md"
+      - "W05 - Console polling 基线 + CPU 效率对比": "weeks/weekly-2026-W05.md"
+      - "W04 - 异步串口契约收敛 + benchmark 补测收尾": "weeks/weekly-2026-W04.md"
+      - "W03 - Q19B userbench → Q19C 全链路收尾": "weeks/weekly-2026-W03.md"
+      - "W02 - Lichee RV Dock 真板 smoke 完成（Q16-Q19）": "weeks/weekly-2026-W02.md"
+      - "W01 - Q15 收尾 + Q6/Q16/Q17 准备": "weeks/weekly-2026-W01.md"
+      - "W00 - 训练营后第一周": "weeks/weekly-2026-W00.md"
       # NAV_WEEKS_END
   - 月报索引:
       # NAV_MONTHS_START
-      - M00 - 训练营后启动实习中: months/monthly-2026-M00.md
+      - "M00 - 训练营后启动实习中": "months/monthly-2026-M00.md"
       # NAV_MONTHS_END
   - 学习笔记:
       # NAV_NOTES_START
-      - Async UART 与 polling Console 性能对比: notes/async-vs-console-performance.md
-      - Async/Await 异步运行时: notes/async-await-runtime.md
-      - DMA：绕过 CPU 的数据搬运: notes/dma-intro.md
-      - ISR 极简 4 步流程: notes/isr-minimal-4-step.md
-      - ISR 触发后禁用中断: notes/isr-disable-level-trigger.md
-      - Lichee Q19B kbench/userbench 问题与解决: notes/lichee-q19b-benchmark-problems-solutions.md
-      - Lichee RV Dock Smoke 前问题清单: notes/lichee-smoke-problems.md
-      - Lichee RV Dock Smoke 解决路径: notes/lichee-smoke-solutions.md
-      - Lichee RV Dock 适配前期准备: notes/lichee-adaptation-prework.md
-      - MMIO：用 load/store 指令操作硬件: notes/mmio-intro.md
-      - OS 抽象具体实现: notes/async-os-abstraction.md
-      - Rust 异步驱动语言特性: notes/rust-async-driver-basics.md
-      - TTY 阻塞读与 ProcessMode 桥接: notes/async-tty-processmode.md
-      - VFS 接口 + flush 实现路径: notes/async-vfs-flush-path.md
-      - VirtIO 网卡队列机制入门: notes/virtio-net-queue-intro.md
-      - io_uring 入门: notes/io-uring-intro.md
-      - smoltcp 接入与 axnet 本地化决策: notes/axnet-localization-decision.md
-      - 一些问题: notes/实习问题.md
-      - 内存序：QEMU 掩盖的真板陷阱: notes/memory-ordering-smp.md
-      - 异步 RX 侧 NAPI 状态机与 spawn 任务: notes/async-rx-napi-and-spawn.md
-      - 异步 TX 侧四阶段 drain 与 fast retry: notes/async-tx-copier-drain.md
-      - 异步 UART 性能测试设计与结果: notes/async-uart-benchmark-design.md
-      - 异步 UART 驱动总体架构: notes/async-uart-driver-architecture.md
-      - 异步串口入口与全局实例: notes/async-uart-entry.md
-      - 异步驱动的泛型与 Trait 抽象: notes/async-driver-generics.md
-      - 异步驱动的线程安全: notes/async-driver-thread-safety.md
+      - "学习内容":
+          - "Async/Await 异步运行时": "notes/学习内容/async-await-runtime.md"
+          - "DMA：绕过 CPU 的数据搬运": "notes/学习内容/dma-intro.md"
+          - "MMIO：用 load/store 指令操作硬件": "notes/学习内容/mmio-intro.md"
+          - "Rust 异步驱动语言特性": "notes/学习内容/rust-async-driver-basics.md"
+          - "io_uring 入门": "notes/学习内容/io-uring-intro.md"
+      - "异步串口":
+          - "Async UART 与 polling Console 性能对比": "notes/异步串口/async-vs-console-performance.md"
+          - "ISR 极简 4 步流程": "notes/异步串口/isr-minimal-4-step.md"
+          - "ISR 触发后禁用中断": "notes/异步串口/isr-disable-level-trigger.md"
+          - "Lichee Q19B kbench/userbench 问题与解决": "notes/异步串口/lichee-q19b-benchmark-problems-solutions.md"
+          - "Lichee RV Dock Smoke 前问题清单": "notes/异步串口/lichee-smoke-problems.md"
+          - "Lichee RV Dock Smoke 解决路径": "notes/异步串口/lichee-smoke-solutions.md"
+          - "Lichee RV Dock 适配前期准备": "notes/异步串口/lichee-adaptation-prework.md"
+          - "OS 抽象具体实现": "notes/异步串口/async-os-abstraction.md"
+          - "TTY 阻塞读与 ProcessMode 桥接": "notes/异步串口/async-tty-processmode.md"
+          - "VFS 接口 + flush 实现路径": "notes/异步串口/async-vfs-flush-path.md"
+          - "内存序：QEMU 掩盖的真板陷阱": "notes/异步串口/memory-ordering-smp.md"
+          - "异步 RX 侧 NAPI 状态机与 spawn 任务": "notes/异步串口/async-rx-napi-and-spawn.md"
+          - "异步 TX 侧四阶段 drain 与 fast retry": "notes/异步串口/async-tx-copier-drain.md"
+          - "异步 UART 性能测试设计与结果": "notes/异步串口/async-uart-benchmark-design.md"
+          - "异步 UART 驱动总体架构": "notes/异步串口/async-uart-driver-architecture.md"
+          - "异步串口入口与全局实例": "notes/异步串口/async-uart-entry.md"
+          - "异步驱动的泛型与 Trait 抽象": "notes/异步串口/async-driver-generics.md"
+          - "异步驱动的线程安全": "notes/异步串口/async-driver-thread-safety.md"
+      - "异步网卡":
+          - "VirtIO 网卡队列机制入门": "notes/异步网卡/virtio-net-queue-intro.md"
+          - "smoltcp 接入与 axnet 本地化决策": "notes/异步网卡/axnet-localization-decision.md"
+          - "异步网卡架构探索": "notes/异步网卡/async-nic-architecture-exploration.md"
+          - "网卡性能测试矩阵研究": "notes/异步网卡/nic-benchmark-matrix-research.md"
       # NAV_NOTES_END
 
 plugins:
