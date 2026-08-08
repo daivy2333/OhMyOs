@@ -71,7 +71,7 @@
 | [VirtIO 网卡队列机制入门](notes/异步网卡/virtio-net-queue-intro) | virtio, network, queue, descriptor, event-idx, interrupt, mmio |
 | [smoltcp 接入与 axnet 本地化决策](notes/异步网卡/axnet-localization-decision) | smoltcp, axnet, network, dependency, capability, polling-fallback, device-mask |
 | [异步网卡架构探索](notes/异步网卡/async-nic-architecture-exploration) | rust, async, network, nic, virtio, smoltcp, architecture, driver |
-| [网卡性能测试矩阵研究](notes/异步网卡/nic-benchmark-matrix-research) | rust, network, benchmark, testing, virtio, qemu, performance, matrix |
+| [网卡性能测试矩阵：测什么、为什么这么测](notes/异步网卡/nic-benchmark-matrix-research) | rust, network, benchmark, testing, virtio, qemu, performance, matrix |
 <!-- NOTES_INDEX_END -->
 
 > 新增内容：在 `docs/weeks/`、`docs/months/` 或 `docs/notes/` 下新建 md 文件，push 后自动更新此页。

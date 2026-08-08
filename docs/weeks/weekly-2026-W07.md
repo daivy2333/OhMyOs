@@ -5,7 +5,7 @@
 
 ## 本周做了什么
 
-本周完成了两项工作：MMIO 网卡中断可诊断基线落地并归档，吸取异步串口经验，提前设计网卡性能测试矩阵。
+本周完成了两项工作：MMIO 网卡中断链路打通，吸取异步串口经验，提前设计网卡性能测试矩阵。
 
 ## VirtIO-MMIO 可诊断中断基线
 
@@ -106,14 +106,14 @@ commit [`2ccb836`](https://github.com/daivy2333/StarryOS/commit/2ccb836)
 
 两个任务。
 
-**轮询网卡测试基线**：把测试代码写完，在 QEMU 上跑通轮询网卡的 TAP 六方向、多流和 payload 阶梯，产出轮询性能基线数据。这是异步改造之前必须拿到的对照基线。
+**轮询网卡测试基线**：把测试代码写完，在 QEMU 上跑通轮询网卡的 TAP 六方向、多流和 payload 阶梯，证明测试矩阵可用。
 
 **异步网卡开发启动**：新开分支，推进异步收包队列的需求分析、方案设计和任务分解。这是第一条异步路径的规划入口，预计持续数周。
 
 ## 参考
 
 - [异步网卡架构探索](../notes/异步网卡/async-nic-architecture-exploration.md)
-- [网卡性能测试矩阵研究](../notes/异步网卡/nic-benchmark-matrix-research.md)
+- [网卡性能测试矩阵：测什么、为什么这么测](../notes/异步网卡/nic-benchmark-matrix-research.md)
 - [异步网卡路线分析](https://github.com/daivy2333/StarryOS/blob/net-k3/.claude/analysis/starryos-async-network-roadmap.md)
 - [基准测试分析文档](https://github.com/daivy2333/StarryOS/blob/net-k3/.claude/analysis/starryos-virtio-mmio-network-benchmark-baseline.md)
 - [资格扫描操作手册](https://github.com/daivy2333/StarryOS/blob/net-k3/.claude/runbooks/network-benchmark-platform-qualification.md)

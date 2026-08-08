@@ -1,103 +1,138 @@
-# 网卡性能测试矩阵研究
+# 网卡性能测试矩阵：测什么、为什么这么测
 
 **日期**：2026-08-08
 **标签**：rust, network, benchmark, testing, virtio, qemu, performance, matrix
 
 > 来源：StarryOS 基准测试分析文档和资格扫描操作手册。
-> 本阶段位于中断诊断完成之后、异步 RX 开发之前，目的是在引入异步前固定测试口径和基线方法。
+> 位置：中断诊断完成之后、异步 RX 开发之前，用于在引入异步前固定测试口径和基线方法。
 
-## 为什么做测试矩阵
+## 为什么需要这个矩阵
 
-异步 RX 引入后，性能变化需要对照基线才能判断改善或退化。如果不在轮询态先把 workload、指标公式、完成语义和 Evidence 格式定下来，后面每次改驱动都要重新讨论"怎么测"。
+异步 RX 引入后，性能变化要对照基线才能判断是改善还是退化。如果不在轮询阶段先把"测什么、怎么测、怎么算、记录什么"定下来，每次改驱动都要重新争论测量方法，数据也无法横向对比。
 
-本阶段不产生性能 B0 结论。它固定复用的测试口径。将来 QEMU、真板、轮询、异步都用同一套测试 ID、公式和记录格式。换平台或换驱动只替换适配层，测试语义不变。
+本阶段不产生正式性能结论，只固定一套复用的测试口径。之后 QEMU、真板、轮询、异步共用同一套测试编号、公式和记录格式；换平台或换驱动只替换适配层，测试语义不变。
 
-## 测试目录
+## 设计思路
 
-测试分为五组，N00-N54。每个测试固定 protocol、direction、payload、flow、profile 六个维度。
+### 三条原则
 
-| 组 | 编号 | 内容 | 等级 |
-|---|---|---|---|
-| 校准 | N00-N03 | manifest、时钟校准、loopback 对照、路径校准 | 必测 |
-| 吞吐 | N10-N14 | TCP 单向、写尺寸、双向、多流、稳态 | 必测 |
-| 延迟 | N20-N24 | TCP RTT、UDP 吞吐/RTT/burst、负载下延迟 | 必测 |
-| 边界 | N30-N35 | 背压、队列边界、连接周转、缓冲边界、复制效率 | 机制 |
-| 效率 | N40-N46 | 空闲成本、CPU 效率、IRQ 效率、调度干扰、内存、唤醒、descriptor | 必测/机制 |
-| 扩展 | N50-N54 | 网络损伤、长稳、过载恢复、SMP 多队列、真板机制 | 扩展/真板 |
+1. **正确性先于性能。** 一个包从发送到对端确认，中间经过六个完成点：系统调用返回（C1）→ 协议栈接受（C2）→ 描述符提交（C3）→ 描述符回收（C4）→ 对端收到（C5）→ 对端校验确认（C6）。`send()` 返回只代表数据进了本机 socket 缓冲区，不代表对端收到。因此吞吐和正确性一律以对端校验确认（C6）为准，发送端统计的字节只算"入队指标"。
 
-测试支持四个 profile：
+2. **先校准环境，再测网卡。** N00-N03 校准组先验证测量工具本身：时钟读数开销多少、软件栈上限多少、网络路径通不通。环境误差先扣除，后面才轮到网卡本身。
 
-| Profile | 用途 | 时长 | warm-up | 当前执行 |
-|---|---|---|---|---|
-| smoke | 功能、握手、短校准 | 1 s | 0 | ✅ |
-| quick | 开发回归 | 5 s | 1 s | ✅ |
-| standard | 正式 B0/A1 比较 | 10 s | 2 s | ✅（Schema 固定，未生成 B0） |
-| soak/board | 长稳、损伤、SMP、真板 | 300 s+ | 按需 | ❌ |
+3. **QEMU 只做相对比较。** QEMU 不仿真物理线延迟，也不仿真真板的 DMA、cache 和 PHY。QEMU 上能比的是"轮询 vs 异步"这类相对变化；真板单独建基线，两者不合并、不排总榜。
 
-## 三层完成语义
+### 四种测试环境
 
-网络发送有六个完成点，但测试只用三个关键层：
+| 环境 | 用途 | 能说明什么 |
+|---|---|---|
+| guest 回环 | 协议栈对照 | 系统调用、缓冲区、协议栈上层的成本，不含网卡 |
+| QEMU user-net | 功能冒烟 | 功能能否跑通（QEMU 内置的用户态网络栈，入站依赖端口转发），不做性能结论 |
+| QEMU TAP | 正式性能基线 | guest 到 host 的完整 VirtIO 路径。TAP 把 guest 网卡接到主机虚拟接口，主机可运行对端、抓包、限速 |
+| 真板外部对端 | 板级性能 | DMA、cache、PLIC、PHY 等真实硬件成本 |
 
-```text
-C1 syscall 返回     ← send() 返回，只代表数据进入 socket buffer
-C4 descriptor 回收  ← 设备释放 descriptor，buffer 可回收
-C6 peer 校验       ← 接收端完成校验并回复摘要
+三个 QEMU 环境不得合并统计。正式吞吐、延迟、CPU 基线固定用 TAP；user-net 只做兼容冒烟。
+
+## 测试项目
+
+矩阵按"要回答的问题"分成五组，编号 N00-N54。每个测试固定六个维度：协议（TCP/UDP）、方向（收/发/双向）、包大小、流数、负载档位、时长档位。
+
+### 校准组 N00-N03（必测）：测量工具本身可靠吗
+
+| 编号 | 测什么 | 得到什么信息 |
+|---|---|---|
+| N00 环境清单 | 记录环境与配置的哈希 | 数据可回溯、可对比，知道这组数是在什么环境下跑的 |
+| N01 计时校准 | 测时钟读取本身的开销 | 把测量误差从结果中扣除 |
+| N02 回环对照 | 不走网卡的 TCP/UDP 传输 | 软件栈自身上限，作为网卡性能的天花板参照 |
+| N03 路径校准 | ARP、ICMP、MTU 基本连通 | 测网卡之前先确认网络路径是通的 |
+
+### 吞吐组 N10-N14（必测）：能传多快
+
+| 编号 | 测什么 | 得到什么信息 |
+|---|---|---|
+| N10 TCP 单向吞吐 | 单连接持续收发 | 最基本的有效吞吐数字 |
+| N11 写入尺寸 | 从 1 字节到 64KB 逐档测 | 小写量看系统调用开销，大写量看缓冲区上限，找出吞吐与开销的平衡点 |
+| N12 TCP 双向 | 两个方向同时传 | 收发同时进行时能否互相推进，还是互相饿死 |
+| N13 多连接 | 1/2/4/8 条连接并发 | 聚合吞吐是否随连接数增长，还是存在单点瓶颈 |
+| N14 稳态 | 长时间稳定运行 | 吞吐是否漂移、有无卡顿 |
+
+### 延迟组 N20-N24（必测）：快不快、稳不稳
+
+| 编号 | 测什么 | 得到什么信息 |
+|---|---|---|
+| N20 TCP 往返延迟 | 4 种包大小各测 200 次 | 报中位数/95%/99% 分位和最大值，看典型延迟和长尾 |
+| N21 UDP 受控速率吞吐 | 按固定速率发送 | 先找无损区间，再逐档加压；同时报"发了多少、收了多少、错了几包"，定位丢包发生在哪一端 |
+| N22 UDP 往返与间隔误差 | 回环往返 + 接收间隔偏差 | 延迟抖动的代理指标 |
+| N23 UDP 突发 | 32~257 个包一次性灌入 | 队列被填满时的丢包、乱序和恢复 |
+| N24 负载下延迟 | 在 0%~90% 负载下测往返 | 网卡繁忙时延迟是否恶化，长尾是否出现 |
+
+### 边界组 N30-N35（机制）：背压和边界行为
+
+| 编号 | 测什么 | 得到什么信息 |
+|---|---|---|
+| N30 非阻塞背压 | 一直写直到返回 EAGAIN | 缓冲区满时驱动是否正确告诉应用"先别发了"，以及满了之后能否恢复 |
+| N31 队列边界 | 63/64/65、127/128/129 包 | VirtIO 环形队列和缓冲池容量边界处的表现 |
+| N32 连接周转 | 反复连接/断开 | 连接建立速率和失败率 |
+| N33 多流公平 | 2/4/8 条流各分到多少 | 各流是否均分带宽（用公平指数量化） |
+| N34 缓冲边界 | socket 缓冲、UDP 元数据、ARP 表满 | 容量满时的 EAGAIN、丢包和恢复 |
+| N35 复制效率 | 每字节被复制了几次 | 需要驱动内部计数，可选 |
+
+### 效率组 N40-N46（必测/机制）：要花多少 CPU 和中断
+
+| 编号 | 测什么 | 得到什么信息 |
+|---|---|---|
+| N40 空闲成本 | 没有流量时的 CPU 占用 | 对轮询驱动最关键：当前 10ms 兜底轮询让 QEMU 空闲 CPU 达 100-111%，这是异步化的主要动机之一 |
+| N41 CPU 效率 | 每传 1GiB 花多少 CPU 秒、每字节多少指令 | 用 host 的 QEMU CPU 时间 + guest 的指令计数器（instret）近似整机成本 |
+| N42 中断效率 | 每收一个包触发几次中断 | 中断风暴检测，用中断快照前后差值计算 |
+| N43 定时器干扰 | 网卡繁忙时定时器是否准时 | 唤醒是否被推迟（overshoot） |
+| N44 内存稳定性 | 持续分配/释放后的内存变化 | 用常驻内存和分配器前后差检测泄漏 |
+| N45 唤醒效率 | 从事件到任务推进的延迟 | 异步驱动专用，机制 |
+| N46 描述符效率 | 描述符占用、驻留时间、卡住次数 | 需要驱动内部遥测，机制 |
+
+### 扩展组 N50-N54（扩展/真板）：损坏环境、长时间、多核、真板
+
+| 编号 | 测什么 | 得到什么信息 |
+|---|---|---|
+| N50 网络损伤 | 用 netem 注入延迟/丢包/乱序/限速 | 受损环境下的降级和恢复能力 |
+| N51 稳定运行 | 固定负载跑 5 分钟 | 卡顿、丢包、资源增长 |
+| N52 过载恢复 | 超载后降低负载 | 恢复时间和残留状态 |
+| N53 SMP 多队列 | 1/2/4 核、多队列 | 多核扩展性和公平性 |
+| N54 真板机制 | DMA、cache、PLIC、PHY | 真实硬件的机制成本 |
+
+### 载荷尺寸怎么选
+
+矩阵按边界选尺寸，让容量上限被踩到：
+
+- TCP 写入尺寸：1、64、256、512、1024、1460、4096、16384、65536 字节（覆盖 64KB socket 缓冲上限）
+- UDP 有效载荷：1、64、256、512、1024、1400、1472-头部 字节（1472 是 MTU 内不分片的上限）
+- 边界值：VirtIO 队列 63/64/65 包、缓冲池 127/128/129 包、UDP 元数据 255/256/257 条、socket 缓冲 65535/65536/65537 字节
+
+边界两侧各取一个值（如 63、65），才能看出容量边界处是正常退化还是行为突变。
+
+## 执行流程：六方向 + 固定步骤
+
+每个测试按 TCP/UDP × 收/发/双向 六个方向执行。每个方向输出：环境清单、原始记录、双端账本（各自统计发了多少包、收了多少包、错了多少包）。
+
+流程固定，顺序不可跳：
+
+```
+交换版本与参数 → 接收端就绪 → 预热（不计入结果）→ 测量屏障 → 数据传输
+→ 接收端校验 → 返回字节/包/错误/时间 → 输出固定格式记录
 ```
 
-- `send()` 返回（C1）：enqueue 指标。不能表示 peer 已收到。
-- descriptor 回收（C4）：驱动物理完成。需要内部遥测。
-- peer 校验（C6）：goodput 真值。吞吐和正确性指标以此为准。
+测试支持四个档位：smoke（1 秒，功能冒烟）、quick（5 秒，开发回归）、standard（10 秒，正式基线）、soak/board（300 秒以上，长稳/损伤/真板）。当前前三个可执行，最后一个只冻结格式未执行。
 
-吞吐指标全部使用 C6 receiver 校验字节。RTT 只在同一时钟域内测量（一端发、一端回），不报告 one-way latency。
+## 结果怎么判定
 
-## 测试拓扑
+三层判定，逐层通过：
 
-三个拓扑不得合并统计：
-
-| 拓扑 | 用途 | 能证明什么 |
+| 层 | 通过 | 失败 |
 |---|---|---|
-| guest loopback | 协议栈对照 | syscall、buffer、smoltcp 上层成本 |
-| QEMU user-net | 兼容 smoke | NAT、hostfwd 下的功能可用性 |
-| QEMU TAP | 正式性能基线 | guest 到 host 完整 VirtIO 路径 |
+| 执行 | 双端启动、输出记录 | 卡死、崩溃、无法建连 |
+| 正确性 | 对端校验指纹一致、账本闭合 | 异常计数、账本不符 |
+| 性能 | 轮次有效、采样覆盖负载 | 轮次无效或能力缺失 |
 
-user-net 在 QEMU 进程内增加用户态网络栈。入站依赖 hostfwd，ICMP 受限。只做兼容 smoke，不产出性能结论。
-
-TAP 将 guest NIC 接到主机虚拟接口。主机可运行原生 peer、抓包和流量整形。吞吐、RTT、丢包、CPU 基线固定使用 TAP。
-
-QEMU 与真板分别建立独立基线。比较轮询到异步的相对变化，不比较绝对吞吐或 RTT。
-
-## 六方向执行模型
-
-TCP/UDP × RX/TX/BIDI 六个方向是基本执行单元。每个方向输出：
-
-- manifest（版本、配置 hash、capability bitmap）
-- round（原始记录，含 invalid reason）
-- 双端账本（sent、accepted、received、errors）
-
-运行流程：
-
-```text
-1. 双端交换版本与参数 → capability 协商
-2. receiver 就绪
-3. warm-up（不计入结果）
-4. 测量屏障
-5. data transfer
-6. receiver 完成校验
-7. 返回接收字节、包、错误和时间
-8. 双端输出固定格式记录
-```
-
-无效 round 原样保留。补跑使用新 round ID。不能删除 outlier 或静默重跑。
-
-## 三级结果判定
-
-| 层 | PASS 条件 | FAIL 条件 |
-|---|---|---|
-| 执行 | 双端启动，输出 manifest 和 round | hang、crash、无法建连 |
-| 正确性 | fingerprint 一致，C6 账本闭合 | invalid reason、异常计数、账本不符 |
-| 性能 | round valid，采样覆盖负载，capability 可用 | invalid round 或 capability 缺失 |
-
-invalid round 可以通过执行资格。只有 valid round 才能进入性能统计。
+"轮次无效"（invalid round）表示数据不全或账本对不上。无效轮次能证明命令、协议和失败分类可运行，但不能进入性能统计。无效轮次原样保留并注明原因，补跑使用新轮次编号，不删除异常值。
 
 ## 当前覆盖状态
 
@@ -105,84 +140,53 @@ invalid round 可以通过执行资格。只有 valid round 才能进入性能�
 
 | 场景 | 执行 | 正确性 | 说明 |
 |---|---|---|---|
-| TCP RX | PASS | invalid | host 9964 TX；guest 7788 RX（partial） |
-| UDP RX | PASS | invalid | host 60822 TX；guest 27 late（buffer full） |
-| TCP TX | PASS | valid | 双端 4702 packets、6582800 B |
-| UDP TX | PASS | invalid | guest 4819 TX；host 4812 RX、7 late |
-| TCP BIDI | PASS | invalid | 单方向闭合，反向未闭合 |
-| UDP BIDI | PASS | invalid | 双向流量存在，账本未闭合 |
+| TCP RX | 通过 | 无效 | host 发 9964 包，guest 收 7788（不完整） |
+| UDP RX | 通过 | 无效 | host 发 60822 包，guest 27 个迟到（缓冲满） |
+| TCP TX | 通过 | 有效 | 双端各 4702 包、6582800 字节 |
+| UDP TX | 通过 | 无效 | guest 发 4819，host 收 4812，7 个迟到 |
+| TCP 双向 | 通过 | 无效 | 一个方向账本闭合，反向未闭合 |
+| UDP 双向 | 通过 | 无效 | 双向有流量，但账本未闭合 |
 
-这些结果证明六方向命令、协议记录和失败分类可运行。不代表网卡性能结论。
+这些结果证明六方向命令、协议记录和失败分类可以运行，不代表网卡性能结论。
 
-## 基础设施已支持但未执行
+### 还差什么：两类缺口
 
-这些项目 CLI 入口已就绪，当前未取得运行记录（TAP 环境待执行）：
+**命令能表达但没跑**（not-run）：TAP 六方向、2/4/8 流、载荷矩阵、时长档位、空闲 CPU 对照、抓包。原因是 TAP 环境还没搭，不是测不了。
 
-| 项目 | 已有入口 |
-|---|---|
-| TAP TCP/UDP 六方向 | server/client、TAP 拓扑、pcap |
-| 2/4/8 flows | `--flows` 参数 |
-| TCP payload 1-2012 B | `--payload` 参数 |
-| UDP payload 1-1436 B | `--payload` 参数 |
-| quick/standard 时长 | `--profile`、`--duration`、`--warmup` |
-| idle CPU 对照 | host collector、两组对照 |
-| TAP pcap | tcpdump |
+**设施本身不支持**（infrastructure-unavailable）：TCP 往返、UDP 往返与间隔误差、精确突发、负载下延迟、填满到 EAGAIN 的背压、队列边界控制、指令/字节统计、中断快照集成、定时器干扰采样、分配器/描述符遥测。这些需要新增能力（如往返请求/应答模式、精确包数参数、驱动内部计数器），属于独立的功能需求，不能靠重复执行命令解决。
 
-记为 `not-run`。不等于 PASS 或网卡功能正常。
-
-## 基础设施缺失
-
-这些测试口径 CLI、采集器或 telemetry 无法表达。记为 `infrastructure-unavailable`：
-
-| 项目 | 缺失能力 |
-|---|---|
-| TCP RTT（N20） | 无 RTT request/reply 模式和原始样本收集 |
-| UDP RTT/间隔误差（N22） | 无匹配 reply 和发送计划 |
-| UDP exact burst（N23） | 无精确 datagram count 参数 |
-| 负载下延迟（N24） | 无并行 RTT 流；offered load 非 pilot-relative |
-| 背压恢复（N30） | 有 EAGAIN 处理，无 fill-to-EAGAIN 模式 |
-| 队列边界（N31/N34） | 无 packet count、socket buffer 容量控制 |
-| guest inst/byte（N41） | calibration 可读，workload round 未集成 delta |
-| benchmark IRQ/packet（N42） | 中断诊断 probe 可用，benchmark round 未集成 snapshot |
-| timer interference（N43） | 无 wake overshoot 原始样本 |
-| allocator/descriptor 遥测（N44-N46） | 无内部计数设施 |
-
-`infrastructure-unavailable` 不等于网卡失败。新增支持需要独立的功能需求，不属于重复执行命令。
-
-两类缺口的区分规则：命令能表达但没跑 → `not-run`；CLI/采集器/遥测根本不支持 → `infrastructure-unavailable`。不能混记。
+两类缺口的区分规则：命令能表达但没跑 → not-run；CLI、采集器或遥测根本不支持 → infrastructure-unavailable。不能混记。
 
 ## 工具链
 
 | 文件 | 作用 |
 |---|---|
-| [`tests/network_benchmark.c`](https://github.com/daivy2333/StarryOS/blob/net-k3/tests/network_benchmark.c) | guest/host 共用 workload |
-| [`tests/network_benchmark_protocol.h`](https://github.com/daivy2333/StarryOS/blob/net-k3/tests/network_benchmark_protocol.h) | 控制协议和记录格式 |
-| [`tests/network_benchmark_platform.h`](https://github.com/daivy2333/StarryOS/blob/net-k3/tests/network_benchmark_platform.h) | 时钟、计数器和平台适配 |
-| [`scripts/network_benchmark_collect.py`](https://github.com/daivy2333/StarryOS/blob/net-k3/scripts/network_benchmark_collect.py) | host CPU/RSS 采样 |
-| [`scripts/network_benchmark_report.py`](https://github.com/daivy2333/StarryOS/blob/net-k3/scripts/network_benchmark_report.py) | 原始记录 → CSV/JSON 摘要 |
-| [`scripts/network_benchmark_evidence.py`](https://github.com/daivy2333/StarryOS/blob/net-k3/scripts/network_benchmark_evidence.py) | 记录完整性与比较资格检查 |
+| `tests/network_benchmark.c` | guest/host 共用的 workload |
+| `tests/network_benchmark_protocol.h` | 控制协议和记录格式 |
+| `tests/network_benchmark_platform.h` | 时钟、计数器和平台适配 |
+| `scripts/network_benchmark_collect.py` | host CPU/内存采样 |
+| `scripts/network_benchmark_report.py` | 原始记录 → CSV/JSON 摘要 |
+| `scripts/network_benchmark_evidence.py` | 记录完整性与比较资格检查 |
 
-guest 用 RISC-V musl 静态编译，host 用本机编译。同一 C 程序支持 client/server、TCP/UDP、TX/RX、RTT 和校验模式。
+guest 用 RISC-V 静态编译，host 用本机编译。同一个 C 程序支持 client/server、TCP/UDP、收/发、往返和校验模式。
 
-## Evidence 要求
+## 每次正式运行保存什么
 
-每次正式运行保存：
+原始记录必须保留，CSV/JSON 摘要不能替代原始记录：
 
 ```text
-manifest.json          # 完整配置、capability、hash
-qemu-command.txt       # 展开后的 QEMU 命令
-qemu-serial.log        # 完整串口日志
-guest-netbench.ndjson  # guest 原始记录
-host-netbench.ndjson   # host 原始记录
-host-cpu.ndjson        # QEMU/peer/collector CPU/RSS
-irq-snapshots.log      # 中断诊断前后快照
-capture.pcap           # TAP 数据包见证
-results.csv            # 逐 round 规范化数据
-summary.json           # 汇总与有效性状态
-evidence-check.json    # 完整性与比较资格
+manifest.json          环境配置与哈希
+qemu-command.txt       展开后的 QEMU 命令
+qemu-serial.log        完整串口日志
+guest-netbench.ndjson  guest 原始记录（每行一条 JSON）
+host-netbench.ndjson   host 原始记录
+host-cpu.ndjson        QEMU/对端/采集器的 CPU 与内存
+irq-snapshots.log      中断诊断前后快照
+capture.pcap           TAP 抓包见证
+results.csv            逐轮次规范化数据
+summary.json           汇总与有效性状态
+evidence-check.json    完整性与比较资格检查
 ```
-
-原始 NDJSON 不可丢弃。CSV 和 JSON 摘要不能替代原始记录。
 
 ## 参考
 
@@ -193,4 +197,3 @@ evidence-check.json    # 完整性与比较资格
 - [中断诊断阶段操作记录](https://github.com/daivy2333/StarryOS/blob/net-k3/.claude/runbooks/ms03-virtio-mmio-irq-evidence.md)
 - [基准分轴规则](https://github.com/daivy2333/StarryOS/blob/net-k3/openspec/specs/knowledge/spec.md)
 - [基础设施缺口需求](https://github.com/daivy2333/StarryOS/blob/net-k3/openspec/specs/improvements/spec.md)
-
