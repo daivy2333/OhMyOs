@@ -10,6 +10,7 @@
 <!-- WEEKLY_INDEX_START -->
 | 编号 | 主题 |
 | --- | --- |
+| [W08](weeks/weekly-2026-W08) | W08 - 网卡收包异步化完成，双向收发推进 |
 | [W07](weeks/weekly-2026-W07) | W07 - 网卡中断诊断 + 性能测试矩阵收口 |
 | [W06](weeks/weekly-2026-W06) | W06 - 网卡主线：本地化编译 + 无 IRQ 轮询 + IRQ 诊断启动 |
 | [W05](weeks/weekly-2026-W05) | W05 - Console polling 基线 + CPU 效率对比 |
@@ -72,6 +73,15 @@
 | [smoltcp 接入与 axnet 本地化决策](notes/异步网卡/axnet-localization-decision) | smoltcp, axnet, network, dependency, capability, polling-fallback, device-mask |
 | [异步网卡架构探索](notes/异步网卡/async-nic-architecture-exploration) | rust, async, network, nic, virtio, smoltcp, architecture, driver |
 | [网卡性能测试矩阵：测什么、为什么这么测](notes/异步网卡/nic-benchmark-matrix-research) | rust, network, benchmark, testing, virtio, qemu, performance, matrix |
+| [网卡收发的异步化：为什么做、怎么做](notes/异步网卡/async-nic-rx-tx-why-how) | rust, async, network, nic, interrupt, queue, backpressure |
+
+### 异步驱动
+
+| 标题 | 标签 |
+| --- | --- |
+| [SDMMC 异步驱动评审意见](notes/异步驱动/sdmmc-driver-review-notes) | rust, async, driver, sdmmc, review, testability, portability |
+| [SDMMC 驱动异步架构分析（simple-sdmmc-extended）](notes/异步驱动/sdmmc-async-architecture) | rust, async, driver, sdmmc, dma, idmac, arceos, visionfive2 |
+| [两种异步驱动范式对比：UART copier 流式 vs SDMMC 请求-响应](notes/异步驱动/async-driver-paradigm-comparison) | rust, async, driver, uart, sdmmc, dma, atomic-waker, wait-queue, architecture |
 <!-- NOTES_INDEX_END -->
 
 > 新增内容：在 `docs/weeks/`、`docs/months/` 或 `docs/notes/` 下新建 md 文件，push 后自动更新此页。

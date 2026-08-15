@@ -11,5 +11,3 @@ site/
 *.swp
 *.swo
 /.*
-/linshi/*
-docs/fornow/*
