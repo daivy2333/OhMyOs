@@ -90,6 +90,7 @@ QEMU 有界双向设备数据面（MS5）在这一周完成验收并归档。设
 
 - [网卡异步化现状：设备侧完成、应用侧待改造](../notes/异步网卡/nic-async-status-device-done-app-pending.md)
 - [网卡收发的异步化：为什么做、怎么做](../notes/异步网卡/async-nic-rx-tx-why-how.md)
+- [异步开发路径：骨架层可复用，肉层是设备特定的](../notes/异步驱动/async-device-skeleton-reusability.md)
 - [双向数据面证据采集（操作手册）](https://github.com/daivy2333/StarryOS/blob/net-k3/.claude/runbooks/ms05-qemu-bidirectional-dataplane-evidence.md)
 - [模拟器内核网络数据面分层诊断（操作手册）](https://github.com/daivy2333/StarryOS/blob/net-k3/.claude/runbooks/qemu-kernel-net-dataplane-debug.md)
 - [自动验证工具](https://github.com/daivy2333/StarryOS/blob/net-k3/scripts/ms05_evidence_capture.py) / [审计工具](https://github.com/daivy2333/StarryOS/blob/net-k3/scripts/ms05_evidence_audit.py)

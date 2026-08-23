@@ -46,6 +46,7 @@ nav:
   - 首页: index.md
   - 周报索引:
       # NAV_WEEKS_START
+      - "W09 - MS5 验收收口：测试暴露的问题与修复": "weeks/weekly-2026-W09.md"
       - "W08 - 网卡收包异步化完成，双向收发推进": "weeks/weekly-2026-W08.md"
       - "W07 - 网卡中断诊断 + 性能测试矩阵收口": "weeks/weekly-2026-W07.md"
       - "W06 - 网卡主线：本地化编译 + 无 IRQ 轮询 + IRQ 诊断启动": "weeks/weekly-2026-W06.md"
@@ -85,18 +86,21 @@ nav:
           - "异步 UART 性能测试设计与结果": "notes/异步串口/async-uart-benchmark-design.md"
           - "异步 UART 驱动总体架构": "notes/异步串口/async-uart-driver-architecture.md"
           - "异步串口入口与全局实例": "notes/异步串口/async-uart-entry.md"
+          - "异步串口总体架构：从硬件中断到 read 返回": "notes/异步串口/async-uart-overall-architecture.md"
           - "异步驱动的泛型与 Trait 抽象": "notes/异步串口/async-driver-generics.md"
           - "异步驱动的线程安全": "notes/异步串口/async-driver-thread-safety.md"
       - "异步网卡":
           - "VirtIO 网卡队列机制入门": "notes/异步网卡/virtio-net-queue-intro.md"
           - "smoltcp 接入与 axnet 本地化决策": "notes/异步网卡/axnet-localization-decision.md"
           - "异步网卡架构探索": "notes/异步网卡/async-nic-architecture-exploration.md"
+          - "网卡异步化现状：设备侧完成、应用侧待改造": "notes/异步网卡/nic-async-status-device-done-app-pending.md"
           - "网卡性能测试矩阵：测什么、为什么这么测": "notes/异步网卡/nic-benchmark-matrix-research.md"
           - "网卡收发的异步化：为什么做、怎么做": "notes/异步网卡/async-nic-rx-tx-why-how.md"
       - "异步驱动":
           - "SDMMC 异步驱动评审意见": "notes/异步驱动/sdmmc-driver-review-notes.md"
           - "SDMMC 驱动异步架构分析（simple-sdmmc-extended）": "notes/异步驱动/sdmmc-async-architecture.md"
           - "两种异步驱动范式对比：UART copier 流式 vs SDMMC 请求-响应": "notes/异步驱动/async-driver-paradigm-comparison.md"
+          - "异步开发路径：骨架层可复用，肉层是设备特定的": "notes/异步驱动/async-device-skeleton-reusability.md"
       # NAV_NOTES_END
 
 plugins:
