@@ -59,6 +59,7 @@ config-change 中断作为独立 cause 发布到任务上下文，驱动读到�
 ## 参考
 
 - [网卡异步化：全链路异步已打通（含故障恢复闭环）](../notes/异步网卡/nic-async-status-device-done-app-pending.md)
+- [异步网卡驱动总体架构](../notes/异步网卡/async-nic-driver-architecture.md)
 - [网卡收发的异步化：为什么做、怎么做](../notes/异步网卡/async-nic-rx-tx-why-how.md)
 - [异步网卡的手动 QEMU 测试：MS1 到 MS7 在测什么](../notes/异步网卡/async-nic-manual-qemu-acceptance.md)
 - [异步网卡手动测试逐项：每个 PASS 在验什么](../notes/异步网卡/async-nic-manual-tests-per-item.md)

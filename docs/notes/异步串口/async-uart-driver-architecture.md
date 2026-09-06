@@ -9,24 +9,34 @@
 
 驱动围绕两个无锁 SPSC 环形缓冲区组织，两个后台 copier 任务作为缓冲区与 UART 硬件之间的桥梁：
 
-```
-用户层                          内核/驱动层                        硬件
+两个方向各有一条通路，中间是环形缓冲区，两端分别接用户栈和硬件。**数据流**和**唤醒流**分开画：
 
-AsyncUartWriter ──push──> RingBufTx ──pop_batch──> TX Copier ──send_bytes──> UART THR
-     ▲                      │    ▲                       │                      │
-     │                 register_waker              TX_WAKER.wake()         THRE 中断
-     │                      │                         │                      │
-     │                      ▼                         ▼                      ▼
-     │               [OsWakerSet poll]           [AtomicWaker]          [ISR 读取]
-     │
-AsyncUartReader <──pop── RingBufRx <──push_batch── RX Copier <──receive_bytes── UART RBR
-                              ▲                       │                      │
-                         register_waker          RX_WAKER.wake()         DR 中断
-                              │                       │
-                        [OsWakerSet poll]        [AtomicWaker]
+**数据流（TX 左→右，RX 右→左）**
+
+```text
+TX：AsyncUartWriter(用户) ──push──▶ RingBufTx ──pop_batch──▶ TX Copier ──send_bytes──▶ UART THR(硬件)
+RX：AsyncUartReader(用户) ◀──pop── RingBufRx ◀──push_batch── RX Copier ◀──receive─── UART RBR(硬件)
 ```
 
-方向相反，结构对称。差别在 TX 侧多了一层 drain 等待和慢轮询回退。
+**唤醒 / 回压流（数据流之外的跨层通知）**
+
+```text
+ RingBufTx 满 → 用户 write 等空间；TX Copier 腾出空间 → OsWakerSet.wake()（放行用户）
+ RingBufRx 空 → 用户 read 等数据；RX Copier 写入数据   → OsWakerSet.wake()（唤醒用户）
+ UART THRE 未空 → TX Copier 等中断；THRE 中断 → ISR 关 IER::THR_EMPTY → TX_WAKER.wake()
+ UART 收到数据   → RX Copier 等中断；DR 中断   → ISR 关 IER::DATA_READY → RX_WAKER.wake()
+```
+
+对应关系可归纳为一张表：
+
+| 触发条件 | 谁在等 | 由谁唤醒 | 唤醒对象 |
+|---|---|---|---|
+| RingBufTx 有空间 | 用户 `write` | TX Copier 取出数据 | `OsWakerSet` |
+| RingBufRx 有数据 | 用户 `read` | RX Copier 写入数据 | `OsWakerSet` |
+| THRE 发送就绪 | TX Copier | THRE 中断 → ISR | `AtomicWaker`（`TX_WAKER`） |
+| DR 有数据 | RX Copier | DR 中断 → ISR | `AtomicWaker`（`RX_WAKER`） |
+
+TX、RX 方向相反、结构对称。差别在 TX 侧多了一层 drain 等待和慢轮询回退（见后文）。
 
 ## 环形缓冲区
 
