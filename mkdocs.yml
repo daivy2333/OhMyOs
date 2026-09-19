@@ -46,6 +46,10 @@ nav:
   - 首页: index.md
   - 周报索引:
       # NAV_WEEKS_START
+      - "W13 - K3 板 SSH 连通，StarryOS 启动多 hart 适配": "weeks/weekly-2026-W13.md"
+      - "W12 - 本周做k3的探索工作": "weeks/weekly-2026-W12.md"
+      - "W11 - 故障恢复语义：设备出错到链路断开都能安全恢复": "weeks/weekly-2026-W11.md"
+      - "W10 - 应用可见的异步网络：栈自己跑，就绪状态桥到 select/poll": "weeks/weekly-2026-W10.md"
       - "W09 - MS5 验收收口：测试暴露的问题与修复": "weeks/weekly-2026-W09.md"
       - "W08 - 网卡收包异步化完成，双向收发推进": "weeks/weekly-2026-W08.md"
       - "W07 - 网卡中断诊断 + 性能测试矩阵收口": "weeks/weekly-2026-W07.md"
@@ -68,6 +72,7 @@ nav:
           - "DMA：绕过 CPU 的数据搬运": "notes/学习内容/dma-intro.md"
           - "MMIO：用 load/store 指令操作硬件": "notes/学习内容/mmio-intro.md"
           - "Rust 异步驱动语言特性": "notes/学习内容/rust-async-driver-basics.md"
+          - "SMP：核心数量如何影响调度，多核为什么不能只靠调度器": "notes/学习内容/smp-multicore-what-we-are-looking-at.md"
           - "io_uring 入门": "notes/学习内容/io-uring-intro.md"
       - "异步串口":
           - "Async UART 与 polling Console 性能对比": "notes/异步串口/async-vs-console-performance.md"
@@ -90,16 +95,21 @@ nav:
           - "异步驱动的泛型与 Trait 抽象": "notes/异步串口/async-driver-generics.md"
           - "异步驱动的线程安全": "notes/异步串口/async-driver-thread-safety.md"
       - "异步网卡":
+          - "ArceOS 与 StarryOS 异步网卡实现对比": "notes/异步网卡/arceos-vs-starryos-nic-async-differences.md"
           - "VirtIO 网卡队列机制入门": "notes/异步网卡/virtio-net-queue-intro.md"
           - "smoltcp 接入与 axnet 本地化决策": "notes/异步网卡/axnet-localization-decision.md"
+          - "异步网卡手动测试逐项：MS1 到 MS7 每个 PASS 在验什么": "notes/异步网卡/async-nic-manual-tests-per-item.md"
           - "异步网卡架构探索": "notes/异步网卡/async-nic-architecture-exploration.md"
-          - "网卡异步化现状：设备侧完成、应用侧待改造": "notes/异步网卡/nic-async-status-device-done-app-pending.md"
+          - "异步网卡的手动 QEMU 测试：MS1 到 MS7 在测什么": "notes/异步网卡/async-nic-manual-qemu-acceptance.md"
+          - "异步网卡驱动总体架构": "notes/异步网卡/async-nic-driver-architecture.md"
+          - "网卡异步化：全链路异步已打通": "notes/异步网卡/nic-async-status-device-done-app-pending.md"
           - "网卡性能测试矩阵：测什么、为什么这么测": "notes/异步网卡/nic-benchmark-matrix-research.md"
           - "网卡收发的异步化：为什么做、怎么做": "notes/异步网卡/async-nic-rx-tx-why-how.md"
       - "异步驱动":
           - "SDMMC 异步驱动评审意见": "notes/异步驱动/sdmmc-driver-review-notes.md"
           - "SDMMC 驱动异步架构分析（simple-sdmmc-extended）": "notes/异步驱动/sdmmc-async-architecture.md"
           - "两种异步驱动范式对比：UART copier 流式 vs SDMMC 请求-响应": "notes/异步驱动/async-driver-paradigm-comparison.md"
+          - "为什么异步驱动要做多 hart 适配": "notes/异步驱动/multi-hart-adaptation-why-and-how.md"
           - "异步开发路径：骨架层可复用，肉层是设备特定的": "notes/异步驱动/async-device-skeleton-reusability.md"
       # NAV_NOTES_END
 

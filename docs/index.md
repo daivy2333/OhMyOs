@@ -10,6 +10,10 @@
 <!-- WEEKLY_INDEX_START -->
 | 编号 | 主题 |
 | --- | --- |
+| [W13](weeks/weekly-2026-W13) | W13 - K3 板 SSH 连通，StarryOS 启动多 hart 适配 |
+| [W12](weeks/weekly-2026-W12) | W12 - 本周做k3的探索工作 |
+| [W11](weeks/weekly-2026-W11) | W11 - 故障恢复语义：设备出错到链路断开都能安全恢复 |
+| [W10](weeks/weekly-2026-W10) | W10 - 应用可见的异步网络：栈自己跑，就绪状态桥到 select/poll |
 | [W09](weeks/weekly-2026-W09) | W09 - MS5 验收收口：测试暴露的问题与修复 |
 | [W08](weeks/weekly-2026-W08) | W08 - 网卡收包异步化完成，双向收发推进 |
 | [W07](weeks/weekly-2026-W07) | W07 - 网卡中断诊断 + 性能测试矩阵收口 |
@@ -41,6 +45,7 @@
 | [DMA：绕过 CPU 的数据搬运](notes/学习内容/dma-intro) | dma, hardware, uart, nic, cache, pio, descriptor, starryos |
 | [MMIO：用 load/store 指令操作硬件](notes/学习内容/mmio-intro) | mmio, hardware, volatile, uart, memory, pma |
 | [Rust 异步驱动语言特性](notes/学习内容/rust-async-driver-basics) | rust, async, generic, unsafe, smart-pointer, send, sync, deref |
+| [SMP：核心数量如何影响调度，多核为什么不能只靠调度器](notes/学习内容/smp-multicore-what-we-are-looking-at) | smp, riscv, scheduler, ipi, memory-ordering, k3 |
 | [io_uring 入门](notes/学习内容/io-uring-intro) | linux, io, async, kernel, syscall |
 
 ### 异步串口
@@ -71,10 +76,14 @@
 
 | 标题 | 标签 |
 | --- | --- |
+| [ArceOS 与 StarryOS 异步网卡实现对比](notes/异步网卡/arceos-vs-starryos-nic-async-differences) | async, nic, arceos, starryos |
 | [VirtIO 网卡队列机制入门](notes/异步网卡/virtio-net-queue-intro) | virtio, network, queue, descriptor, event-idx, interrupt, mmio |
 | [smoltcp 接入与 axnet 本地化决策](notes/异步网卡/axnet-localization-decision) | smoltcp, axnet, network, dependency, capability, polling-fallback, device-mask |
+| [异步网卡手动测试逐项：MS1 到 MS7 每个 PASS 在验什么](notes/异步网卡/async-nic-manual-tests-per-item) | rust, async, network, nic, qemu, test, acceptance |
 | [异步网卡架构探索](notes/异步网卡/async-nic-architecture-exploration) | rust, async, network, nic, virtio, smoltcp, architecture, driver |
-| [网卡异步化现状：设备侧完成、应用侧待改造](notes/异步网卡/nic-async-status-device-done-app-pending) | rust, async, network, nic, driver, socket, polling, syscall |
+| [异步网卡的手动 QEMU 测试：MS1 到 MS7 在测什么](notes/异步网卡/async-nic-manual-qemu-acceptance) | rust, async, network, nic, qemu, test, acceptance, driver |
+| [异步网卡驱动总体架构](notes/异步网卡/async-nic-driver-architecture) | rust, async, network, nic, virtio, smoltcp, driver, recovery, readiness |
+| [网卡异步化：全链路异步已打通](notes/异步网卡/nic-async-status-device-done-app-pending) | rust, async, network, nic, driver, socket, polling, syscall |
 | [网卡性能测试矩阵：测什么、为什么这么测](notes/异步网卡/nic-benchmark-matrix-research) | rust, network, benchmark, testing, virtio, qemu, performance, matrix |
 | [网卡收发的异步化：为什么做、怎么做](notes/异步网卡/async-nic-rx-tx-why-how) | rust, async, network, nic, interrupt, queue, backpressure |
 
@@ -85,6 +94,7 @@
 | [SDMMC 异步驱动评审意见](notes/异步驱动/sdmmc-driver-review-notes) | rust, async, driver, sdmmc, review, testability, portability |
 | [SDMMC 驱动异步架构分析（simple-sdmmc-extended）](notes/异步驱动/sdmmc-async-architecture) | rust, async, driver, sdmmc, dma, idmac, arceos, visionfive2 |
 | [两种异步驱动范式对比：UART copier 流式 vs SDMMC 请求-响应](notes/异步驱动/async-driver-paradigm-comparison) | rust, async, driver, uart, sdmmc, dma, atomic-waker, wait-queue, architecture |
+| [为什么异步驱动要做多 hart 适配](notes/异步驱动/multi-hart-adaptation-why-and-how) | smp, multi-hart, async-driver, riscv, starryos, k3 |
 | [异步开发路径：骨架层可复用，肉层是设备特定的](notes/异步驱动/async-device-skeleton-reusability) | rust, async, driver, uart, nic, skeleton, framework |
 <!-- NOTES_INDEX_END -->
 
