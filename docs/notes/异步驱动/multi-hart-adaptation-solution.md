@@ -4,17 +4,17 @@
 **标签**：smp, multi-hart, async-driver, riscv, starryos, critical-section, ipi, scheduler
 
 > 范围：StarryOS 的异步 UART（NS16550）和异步网卡（VirtIO-MMIO）两个驱动，QEMU `SMP=16`。
-> 前置：[为什么异步驱动要做多 hart 适配](./multi-hart-adaptation-why-and-how.md) 列出问题，本文对应给出解法和代码位置。
+> 前置：问题清单见 [为什么异步驱动要做多 hart 适配](./multi-hart-adaptation-why-and-how.md)。
 > 依据：本地 `mul-hart-k3` 分支。QEMU 结果不外推到 K3 真板。
 
 ## 整体数据流
 
 四件事按这个顺序接起来，后一件依赖前一件：
 
-1. 每个 hart 启动时写下自己的运行队列，然后把自己登记进"已就绪位图"
-2. 驱动角色从已就绪位图里挑 hart，把绑核在入队前钉死
-3. 唤醒发生时，选目标队列 → 改状态 → 远端就发一次 IPI
-4. 共享状态（waker、ring、快照）靠"本地关中断 + 全局 owner 锁"互斥
+1. 每个 hart 写完自己的运行队列，再把自己登记进就绪位图
+2. 驱动角色从就绪位图里挑 hart，在第一次入队前把绑核钉死
+3. 唤醒发生时选目标队列、改状态，目标在远端就发一次 IPI
+4. waker、ring、快照这类共享状态靠"本地关中断 + 全局 owner 锁"互斥
 
 ## 1. 临界区：本地关中断之外，加一把全局 owner 锁
 
@@ -40,19 +40,17 @@ was_enabled
 
 `release()`（`:121`）对称：深度减一，1 → 0 时 `GLOBAL_LOCK.store(false, Release)`，然后**只有** `was_enabled` 为真才重新开中断。
 
-三个设计点：
-
 | 做法 | 为什么 |
 |---|---|
 | 全局只有一把锁 + per-hart 嵌套深度 | 临界区要保护的是同一组 waker cell，锁的粒度必须覆盖所有 hart。嵌套深度让同 hart 重入只加计数，不必反复抢 |
 | 抢不到锁时自旋 | 临界区里只有几次原子操作，禁止阻塞、让出或拿驱动锁，所以不能用任何会挂起的锁 |
-| `release(false)` 不开中断 | ISR 里 `acquire` 时中断已经是关的。恢复原状态而不是无条件开中断，才不会在中断还没处理完就提前重入 |
+| `release(false)` 不开中断 | ISR 里 `acquire` 时中断已经是关的。恢复原状态才能避免在中断还没处理完时提前重入 |
 
-挂在 `critical_section` crate 的官方 `set_impl!` 上（`kernel/src/lib.rs:66`），`RawRestoreState` 直接用 `restore-state-bool`。这个文件刻意不依赖 `axhal`，宿主测试用 `#[path]` 把同一份代码连同假的 `IrqOps` 后端编进去，跑的是同一套 `acquire`/`release`。
+挂在 `critical_section` crate 的官方 `set_impl!` 上（`kernel/src/lib.rs:66`），`RawRestoreState` 直接用 `restore-state-bool`。这个文件不依赖 `axhal`，宿主测试用 `#[path]` 把同一份代码连同假的 `IrqOps` 后端编进去，跑的是同一套 `acquire`/`release`。
 
-失败路径一律 fail closed：hart id 越界、深度下溢、深度到 `u32` 上限，都 panic 而不是绕回去。
+失败路径一律 fail closed。hart id 越界、深度下溢、深度到 `u32` 上限都直接 panic，不绕回去。
 
-## 2. 每个 hart 一条运行队列，"已就绪"是单独的一个位图
+## 2. 每个 hart 一条运行队列，就绪状态单独用一个位图
 
 ### 队列数组
 
@@ -60,7 +58,7 @@ was_enabled
 
 ### 就绪位图
 
-`SCHEDULABLE: AtomicUsize`（`:72`）是唯一的就绪事实来源：
+`SCHEDULABLE: AtomicUsize`（`:72`）是全系统判断某个 hart 的队列能不能用的唯一依据：
 
 ```rust
 // 写：先把槽位写好，再 Release 发布
@@ -71,7 +69,7 @@ mark_schedulable(cpu_id);                    // fetch_or(1<<cpu, Release)
 let bits = SCHEDULABLE.load(Acquire);
 ```
 
-`init()`（`:782`，boot hart）和 `init_secondary()`（`:812`，副 hart）都走"写槽位 → 置位"这两步。Release/Acquire 这一对是这里的关键：读侧看到某位为真之后再去解引用 `RUN_QUEUES[cpu]`，写侧保证已经写完。
+`init()`（`:782`，boot hart）和 `init_secondary()`（`:812`，副 hart）都走"写槽位 → 置位"这两步。Release/Acquire 这一对决定了顺序：读侧看到某位为真之后再去解引用 `RUN_QUEUES[cpu]`，写侧保证已经写完。
 
 ### 三个容易混的集合
 
@@ -109,7 +107,7 @@ QEMU virt 上 `axhal::irq::send_ipi` 走 SBI `send_ipi`（hart mask）→ OpenSB
 was_ready && cpu_id != this_cpu_id
 ```
 
-`was_ready` 只在 `Blocked → Ready` 真实成功时为真，所以重复唤醒、不在 `Blocked` 状态的唤醒都不会发 IPI。本地唤醒不发，只置抢占标志（`run_queue.rs:397`）。
+`was_ready` 只在 `Blocked → Ready` 状态迁移成功时为真，所以重复唤醒、不在 `Blocked` 状态的唤醒都不会发 IPI。本地唤醒不发，只置抢占标志（`run_queue.rs:397`）。
 
 ## 4. 唤醒目标选择：本地优先
 
@@ -132,20 +130,20 @@ intersect.first_index()                                      // 交集里最低�
 
 即：当前 hart 同时在任务亲和集和已发布集合内就留在本地；否则从交集里确定性地取一个。两个后果正好对上前面两个问题——固定绑核的 copier 必然投递到它那一个远端 hart（发一次 IPI），全掩码任务留在本地（不发 IPI、不迁移）。
 
-`AxWaker`（`crates/axtask/src/future/mod.rs:41`）走这个入口并请求真实的 `Blocked → Ready`。普通 spawn 仍走 `select_schedulable_cpu()` 的全局轮转，行为没变。
+`AxWaker`（`crates/axtask/src/future/mod.rs:41`）走这个入口并请求完成 `Blocked → Ready` 迁移。普通 spawn 仍走 `select_schedulable_cpu()` 的全局轮转，行为没变。
 
 ## 5. 绑核和分配：角色到 hart 的确定性映射
 
 ### 规则
 
-`kernel/src/drivers/placement.rs:103` 的 `place_roles()` 接收一个升序、去重、无越界的已发布 hart id 列表和一个 anchor：
+`kernel/src/drivers/placement.rs:103` 的 `place_roles()` 接收已发布 hart id 的升序去重列表（每项都小于 `MAX_CPU_NUM`）和一个 anchor：
 
 ```
 at(i) = schedulable[(anchor 在列表中的位置 + i) % len]
 角色 i：UART RX copier = 0，UART TX copier = 1，网卡 owner = 2，网卡 runner = 3
 ```
 
-输入不合法（空、乱序、重复、任一 id ≥ `MAX_CPU_NUM`）返回 `None`，调用方 fail closed。anchor 不在列表里时从索引 0 开始——不虚构拓扑过滤。
+输入为空、乱序、重复或越界时返回 `None`，调用方 fail closed。anchor 不在列表里时从索引 0 开始，不按拓扑过滤。
 
 规则是纯函数，不碰 MMIO、IRQ 路由和 hart 数量连续性，所以能在宿主测试里穷举。`SMP=16` 下四个角色落在四个不同 hart 上；只有单 hart 时才共置。
 
@@ -157,7 +155,7 @@ at(i) = schedulable[(anchor 在列表中的位置 + i) % len]
 | 网卡 stack runner | `axnet::start_stack_runner_affinity()`（`crates/axnet/src/stack_runner.rs:683`） | Service 先装好。runner 起不来是硬停止，不允许 owner 在没有 runner 的情况下启动 |
 | 网卡队列 owner | `start_rx_task_affinity()`（`crates/axnet/src/async_rx.rs:3078`） | IRQ 注册成功之后才起 |
 
-pinned 的 hart 只在 spawn 真正成功后记录（`record_runner_pinned` 在 `Ok` 分支里），spawn 被拒时观测里显示 UNKNOWN 而不是假角色。
+pinned 的 hart 只在 spawn 返回 `Some` 之后记录（`record_runner_pinned` 在 `Ok` 分支里），spawn 被拒时观测里显示 UNKNOWN，不记成已绑核。
 
 ### 失败原子性
 
@@ -171,7 +169,7 @@ pinned 的 hart 只在 spawn 真正成功后记录（`record_runner_pinned` 在 
 
 ### UART TX copier 丢唤醒
 
-copier 在 ring 空时注册 waker、发布 inactive、返回 `Pending` 停放。如果生产者在这两步之间推入数据，任务状态还是 `Running`，没有 `Blocked → Ready`，那次唤醒就丢了，随后停放在一个非空 ring 上。表现是同一个二进制时而 PASS 时而失败。
+copier 在 ring 空时注册 waker 并发布 inactive，然后返回 `Pending` 停放。如果生产者在这两步之间推入数据，任务状态还是 `Running`，没有 `Blocked → Ready`，那次唤醒就丢了，随后停放在一个非空 ring 上。表现是同一个二进制时而 PASS 时而失败。
 
 修法是补上"注册→重查"：注册 ring waker 后重查 ring，非空就 self-wake 重试，不停放（`crates/uart_16550/src/async_/driver.rs`），并加 `park_after_register_retry` 计数。
 
@@ -185,17 +183,17 @@ copier 在 ring 空时注册 waker、发布 inactive、返回 `Pending` 停放�
 
 QEMU 平台配置里 PLIC MMIO 写成 `0x0c00_0000/0x21_0000`，只够 8 个 hart 的 supervisor context。16 hart 实测中 boot hart 11 在 `init_percpu` 访问超映射地址时 page fault，后面的 `current task is uninitialized` panic 把原始故障盖掉了。`.axconfig.toml:22` 改成 `0x0c00_0000/0x60_0000`（设备树给的就是 6 MB）。
 
-## 7. 怎么证明它真按这个跑
+## 7. 怎么证明它按这个规则跑
 
-- **UART 快照**：QEMU-only 命令 `0x55534d31`，152 字节定长帧。内容有配置/在线掩码、两个 copier 的绑核、实际中断 hart、copier 最近与累计 hart、ring 占用与空位、TX 四阶段完成、远端入队/IPI/恢复计数、非法绑核拒绝数。逐字节序列化而不是 memcpy 结构体，否则 `repr(C)` 填充的未定义字节会带进用户态。旧 TXDBG 接口不变
-- **网卡 V5**：`0x4e495435`，按字节是 V4 的前缀扩展，V1–V4 的命令、布局、语义不动。关键区别是 V5 里 owner/runner 的 hart 是任务在轮询入口记下的**实际值**，不是从绑核掩码推断的
-- **关 timer 的远端唤醒见证**：目标 hart 关掉本地 timer 再停放，另一个 hart 触发唤醒。如果任务还能被救活并记录到自己 hart 上的 IPI 接收增量，就排除了"靠 100Hz tick 救活"的可能。见证是单飞的，每次运行重置状态，取消和超时都要求目标先恢复 timer 才允许发布终态
+- UART 快照（QEMU-only 命令 `0x55534d31`）是一份 152 字节定长帧。帧内有配置/在线掩码、两个 copier 的绑核、实际中断 hart，以及 copier 最近/累计 hart、ring 占用与空位、TX 四阶段完成。另有远端入队/IPI/恢复计数和非法绑核拒绝数。逐字节序列化，不 memcpy 结构体，否则 `repr(C)` 填充的未定义字节会带进用户态。旧 TXDBG 接口不变
+- 网卡 V5（`0x4e495435`）按字节是 V4 的前缀扩展，V1–V4 的命令、布局、语义不动。V5 新增的 owner/runner hart 字段是任务在轮询入口记下的**实际值**，不是从绑核掩码推断的
+- 关 timer 的远端唤醒见证：目标 hart 关掉本地 timer 再停放，另一个 hart 触发唤醒。任务还能被救活、并记录到自己 hart 上的 IPI 接收增量，就排除了"靠 100Hz tick 救活"的可能。同一时刻只允许一次运行，每次开始都重置状态；取消和超时都要求目标先恢复 timer 才允许发布终态
 
 ## 8. 还没做完的
 
-- **迁移视图的读写序**：`MigrationSlot` 用原子字段加自定义 seqlock。写侧在奇数标记后加了 Release fence，但 Release 只约束它之前的操作，后续字段写仍可能越过；读侧在最终序号检查前也少一道边界。弱内存序下读者可能接受混合视图。修法已定，代码还没改
-- **SMP=16 上的分驱动运行验证**：串口单独一遍、网卡单独一遍，各自独立判定，不以另一方成功替代
-- **组合压力与恢复交错**：两驱动同时跑，以及网卡 reset/link 翻转时 UART 仍有可判定进度
+- 迁移视图的读写序还有缺口。`MigrationSlot` 用原子字段加自定义 seqlock，写侧在奇数标记后加了 Release fence，但 Release 只约束它之前的操作，后续字段写仍可能越过；读侧在最终序号检查前也少一道边界。弱内存序下读者可能接受混合视图。修法已定，代码还没改
+- SMP=16 上的分驱动运行验证还没做。串口和网卡各自单独跑一遍、独立判定，不以另一方成功替代
+- 组合压力与恢复交错还没做。两驱动同时跑，以及网卡 reset/link 翻转时 UART 仍有可判定进度
 
 ## 代码位置
 
@@ -216,5 +214,5 @@ QEMU 平台配置里 PLIC MMIO 写成 `0x0c00_0000/0x21_0000`，只够 8 个 har
 ## 边界
 
 - 迁移只改变同一任务的执行 hart，不创建第二实例
-- QEMU `SMP=16` 只证明 16 个同构 hart 的软件并发。X100/A100 异构能力、AIA 中断路由、真板实际在线的 hart 集合留给真板验证
-- 不包含 CPU 热插拔、IRQ 动态负载均衡、多队列网卡和多网卡
+- QEMU `SMP=16` 只证明 16 个同构 hart 的软件并发。X100/A100 异构能力、AIA 中断路由和真板实际在线的 hart 集合留给真板验证
+- 不包含 CPU 热插拔、IRQ 动态负载均衡，以及多队列网卡和多网卡
