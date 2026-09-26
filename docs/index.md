@@ -10,6 +10,7 @@
 <!-- WEEKLY_INDEX_START -->
 | 编号 | 主题 |
 | --- | --- |
+| [W14](weeks/weekly-2026-W14) | W14 - UART 与网卡固定绑核，唤醒路径改为本地优先 |
 | [W13](weeks/weekly-2026-W13) | W13 - K3 板 SSH 连通，StarryOS 启动多 hart 适配 |
 | [W12](weeks/weekly-2026-W12) | W12 - 本周做k3的探索工作 |
 | [W11](weeks/weekly-2026-W11) | W11 - 故障恢复语义：设备出错到链路断开都能安全恢复 |
@@ -95,6 +96,7 @@
 | [SDMMC 驱动异步架构分析（simple-sdmmc-extended）](notes/异步驱动/sdmmc-async-architecture) | rust, async, driver, sdmmc, dma, idmac, arceos, visionfive2 |
 | [两种异步驱动范式对比：UART copier 流式 vs SDMMC 请求-响应](notes/异步驱动/async-driver-paradigm-comparison) | rust, async, driver, uart, sdmmc, dma, atomic-waker, wait-queue, architecture |
 | [为什么异步驱动要做多 hart 适配](notes/异步驱动/multi-hart-adaptation-why-and-how) | smp, multi-hart, async-driver, riscv, starryos, k3 |
+| [多 hart 适配是怎么落地的](notes/异步驱动/multi-hart-adaptation-solution) | smp, multi-hart, async-driver, riscv, starryos, critical-section, ipi, scheduler |
 | [异步开发路径：骨架层可复用，肉层是设备特定的](notes/异步驱动/async-device-skeleton-reusability) | rust, async, driver, uart, nic, skeleton, framework |
 <!-- NOTES_INDEX_END -->
 

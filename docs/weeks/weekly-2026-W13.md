@@ -29,7 +29,7 @@ W12 自购的线材（一个串口线，三个杜邦按钮，一个电源，一�
 - UART RX/TX copier 和网络 owner/runner 在 secondary hart 就绪后再以入队前绑核启动，保留 SPSC 单生产者单消费者和队列唯一 owner 的结构
 - UART 和网络分开做固定绑核验证，再跑组合压力
 
-当前进度：方案已确定，开发分支 `mul-hart-k3`，第一阶段（多核同步与调度基础：critical-section、axtask、IPI、PLIC 映射修正）进行中，工作区有未提交改动。
+当前进度：方案已确定，开发分支 `mul-hart-k3`。第一阶段（多核同步与调度基础：critical-section、axtask、IPI、PLIC 映射修正）在 9/17 提交（[`6796315a`](https://github.com/daivy2333/StarryOS/commit/6796315a)），第二阶段（UART 与网卡固定绑核、观测）待做。
 
 相关工作细节写成了一篇笔记：[为什么异步驱动要做多 hart 适配](../notes/异步驱动/multi-hart-adaptation-why-and-how.md)。
 
@@ -40,6 +40,7 @@ W12 自购的线材（一个串口线，三个杜邦按钮，一个电源，一�
 
 ## 参考
 
-- [StarryOS（daivy2333/StarryOS）](https://github.com/daivy2333/StarryOS) — 多 hart 适配的设计与任务清单在本地 `mul-hart-k3` 分支的 `openspec/changes/ms08-qemu-multi-hart-correctness-baseline/` 目录下，尚未推送
+- [StarryOS（daivy2333/StarryOS）](https://github.com/daivy2333/StarryOS) — 多 hart 适配的工作在 `mul-hart-k3` 分支
 - [K3 资料仓（daivy2333/k3）](https://github.com/daivy2333/k3)
 - [笔记：为什么异步驱动要做多 hart 适配](../notes/异步驱动/multi-hart-adaptation-why-and-how.md)
+- [笔记：多 hart 适配是怎么落地的](../notes/异步驱动/multi-hart-adaptation-solution.md)

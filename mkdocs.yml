@@ -46,6 +46,7 @@ nav:
   - 首页: index.md
   - 周报索引:
       # NAV_WEEKS_START
+      - "W14 - UART 与网卡固定绑核，唤醒路径改为本地优先": "weeks/weekly-2026-W14.md"
       - "W13 - K3 板 SSH 连通，StarryOS 启动多 hart 适配": "weeks/weekly-2026-W13.md"
       - "W12 - 本周做k3的探索工作": "weeks/weekly-2026-W12.md"
       - "W11 - 故障恢复语义：设备出错到链路断开都能安全恢复": "weeks/weekly-2026-W11.md"
@@ -110,6 +111,7 @@ nav:
           - "SDMMC 驱动异步架构分析（simple-sdmmc-extended）": "notes/异步驱动/sdmmc-async-architecture.md"
           - "两种异步驱动范式对比：UART copier 流式 vs SDMMC 请求-响应": "notes/异步驱动/async-driver-paradigm-comparison.md"
           - "为什么异步驱动要做多 hart 适配": "notes/异步驱动/multi-hart-adaptation-why-and-how.md"
+          - "多 hart 适配是怎么落地的": "notes/异步驱动/multi-hart-adaptation-solution.md"
           - "异步开发路径：骨架层可复用，肉层是设备特定的": "notes/异步驱动/async-device-skeleton-reusability.md"
       # NAV_NOTES_END
 
