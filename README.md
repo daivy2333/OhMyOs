@@ -21,6 +21,8 @@ OhMyOs/
 ├── requirements.txt              # Python 依赖
 ├── docs/
 │   ├── index.md                  # 首页（索引表由脚本填充）
+│   ├── pictures/                 # 照片库（结构随意，可自由建子目录）
+│   ├── video/                    # 视频库
 │   ├── weeks/                    # 周报
 │   │   ├── weekly-2026-WXX.md
 │   ├── months/                   # 月报
@@ -92,6 +94,41 @@ docs/notes/
 - `**标签**：` 行（逗号分隔）→ 自动提取到索引表「标签」列
 
 文件名和分区名可以自由命名。移动已有笔记后，需同步更新仓库内指向它的相对链接；站点不会为旧地址生成重定向。
+
+## 引用图片和视频
+
+媒体库有两个，内部结构随意，可以按系列建子目录，也可以散着放：
+
+- `docs/pictures/`：照片库，周报、月报、笔记都可以引用
+- `docs/video/`：视频库
+
+引用时写相对路径（相对当前 md 文件所在目录）：
+
+| md 文件位置 | 引用写法 |
+| --- | --- |
+| `docs/weeks/`、`docs/months/`、`docs/notes/` 一级笔记 | `../pictures/…`、`../video/…` |
+| `docs/notes/<分区名>/` 下的笔记 | `../../pictures/…`、`../../video/…` |
+
+图片用 Markdown 语法：
+
+```markdown
+![架构图](../pictures/异步驱动/architecture.png)
+```
+
+视频用 HTML 标签（`<video>` 标签在页面上会显示为带播放按钮的播放器）：
+
+```html
+<video controls src="../video/screen-recording-2026-10-06.mp4" width="100%"></video>
+```
+
+限制：
+
+- 单个文件必须小于 100MB（GitHub 硬限制）；超过 50MB push 时会收到警告，可以忽略。视频建议只放短视频，整站体积软上限约 1GB。
+- **不要用 Git LFS**：GitHub Pages 不支持，发布出来会是损坏的指针文件。
+- 文件名避免空格，用 `-` 连接（如 `screen-recording-2026-10-06.mp4`），否则 Markdown 引用需要转义。
+- 路径写错不会静默 404：CI 里的 `mkdocs build --strict` 会因失效链接直接构建失败。
+- 移动照片或视频后，需要同步更新引用它的 md 文件（与移动笔记的规则相同）。
+- 照片和视频不会出现在首页索引和侧栏导航中（generate.py 只扫描 md 文件）。
 
 ## 自动生成原理
 
