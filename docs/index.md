@@ -10,6 +10,7 @@
 <!-- WEEKLY_INDEX_START -->
 | 编号 | 主题 |
 | --- | --- |
+| [W15](weeks/weekly-2026-W15) | W15 - 实习总结：异步驱动三个月，从 D1 串口到 SMP=16 网卡 |
 | [W14](weeks/weekly-2026-W14) | W14 - UART 与网卡固定绑核，唤醒路径改为本地优先 |
 | [W13](weeks/weekly-2026-W13) | W13 - K3 板 SSH 连通，StarryOS 启动多 hart 适配 |
 | [W12](weeks/weekly-2026-W12) | W12 - 本周做k3的探索工作 |
@@ -98,6 +99,12 @@
 | [为什么异步驱动要做多 hart 适配](notes/异步驱动/multi-hart-adaptation-why-and-how) | smp, multi-hart, async-driver, riscv, starryos, k3 |
 | [多 hart 适配是怎么落地的](notes/异步驱动/multi-hart-adaptation-solution) | smp, multi-hart, async-driver, riscv, starryos, critical-section, ipi, scheduler |
 | [异步开发路径：骨架层可复用，肉层是设备特定的](notes/异步驱动/async-device-skeleton-reusability) | rust, async, driver, uart, nic, skeleton, framework |
+
+### 视频
+
+| 标题 | 标签 |
+| --- | --- |
+| [演示录屏（2026-10-06）](notes/视频/screen-recording-2026-10-06) | demo |
 <!-- NOTES_INDEX_END -->
 
 > 新增内容：在 `docs/weeks/`、`docs/months/` 或 `docs/notes/` 下新建 md 文件，push 后自动更新此页。
