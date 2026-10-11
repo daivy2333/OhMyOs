@@ -10,6 +10,7 @@
 <!-- WEEKLY_INDEX_START -->
 | 编号 | 主题 |
 | --- | --- |
+| [W16](weeks/weekly-2026-W16) | W16 - K3 真板进入自研异步 shell，正向官方 shell 推进 |
 | [W15](weeks/weekly-2026-W15) | W15 - 实习总结：异步驱动三个月，从 D1 串口到 SMP=16 网卡 |
 | [W14](weeks/weekly-2026-W14) | W14 - UART 与网卡固定绑核，唤醒路径改为本地优先 |
 | [W13](weeks/weekly-2026-W13) | W13 - K3 板 SSH 连通，StarryOS 启动多 hart 适配 |
