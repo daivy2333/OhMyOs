@@ -1,7 +1,7 @@
 # W17 - 收官周：三连验收后，16 个 hart 的 BusyBox shell 落地
 
 **周期**：2026-10-10 ~ 2026-10-17
-**仓库**：StarryOS（[`daivy2333/StarryOS`](https://github.com/daivy2333/StarryOS)，[`k3` 分支](https://github.com/daivy2333/StarryOS/tree/k3)，本周 6 个提交，三个里程碑收尾归档）
+**仓库**：StarryOS（[`daivy2333/StarryOS`](https://github.com/daivy2333/StarryOS)，[`k3` 分支](https://github.com/daivy2333/StarryOS/tree/k3)，本周 8 个提交，三个里程碑收尾归档）
 
 > 实习最后一周，进迭时空 K3（CoM260 Kit）四天验收三个里程碑。10-13 的异步数据面把 GMAC 中断接入异步队列/协议栈契约，单 hart IRQ 驱动的双向收发四协议真板通过；10-14 的网络恢复语义收口真实拔插、受控运行时 reset 与新旧对象隔离；10-16 的多 hart 最终验收拉起 16 个 AP hart，交付最终形态——异步串口上跑普通 BusyBox RAM rootfs shell，同一次启动里 `wget`/`nc` 用户态网络走异步 GMAC。真板现场暴露两个产品 bug（shell 提示符前 SIGSEGV、`wget` 的 socket ENOSYS），均修复并板验。TCP 单样本对比原厂 Linux：板→PC 714.3 vs 934.0 Mbps（76.5%），PC→板 218.8 vs 854.3 Mbps（25.6%）。K3 路线图至此全部交付，实习以板子交接和成果汇报收尾。
 
@@ -80,3 +80,14 @@ K3 路线图全部做完：板级基线 → 中断底座 → 轮询网络 → �
 - [K3 资料仓（daivy2333/k3）](https://github.com/daivy2333/k3)
 - 周报 [W16](../weeks/weekly-2026-W16.md)（K3 首个 shell 会话）
 - 周报 [W15](../weeks/weekly-2026-W15.md)（实习总结）
+
+本周提交（`k3` 分支，按时间先后）：
+
+- [`5f977f1e`](https://github.com/daivy2333/StarryOS/commit/5f977f1e)（10-13）MS12: K3 async bidirectional data plane (Iteration 000-002) + change closeout
+- [`d07285c0`](https://github.com/daivy2333/StarryOS/commit/d07285c0)（10-13）docs: sync SNAPSHOT after MS12 closeout (HEAD 5f977f1e, worktree clean)
+- [`0a8835c8`](https://github.com/daivy2333/StarryOS/commit/0a8835c8)（10-14）MS13: K3 single-hart network recovery semantics (Iteration 000-002) + change closeout
+- [`9179205d`](https://github.com/daivy2333/StarryOS/commit/9179205d)（10-14）docs: sync SNAPSHOT after MS13 closeout (HEAD 0a8835c8, worktree clean)
+- [`42ea95e2`](https://github.com/daivy2333/StarryOS/commit/42ea95e2)（10-16）MS14: K3 multi-hart NIC/UART async final acceptance (Iteration 000-004) + change closeout
+- [`01681913`](https://github.com/daivy2333/StarryOS/commit/01681913)（10-16）docs: sync SNAPSHOT after MS14 closeout (HEAD 42ea95e2, worktree clean)
+- [`d6aaead9`](https://github.com/daivy2333/StarryOS/commit/d6aaead9)（10-16）docs: file ISS04 (char-device read <=2048B short-read) + register R81
+- [`1cc63efd`](https://github.com/daivy2333/StarryOS/commit/1cc63efd)（10-16）repo(_)
